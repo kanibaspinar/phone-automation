@@ -302,5 +302,5 @@ These pages use the same underlying database models (`Device`, `InstagramAccount
 
 ## License
 
-For Personal usage or research based tasks only.
+Add your license of choice here (for example, MIT, Apache 2.0, or proprietary), and include the corresponding `LICENSE` file in the repository.
 

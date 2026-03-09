@@ -1,0 +1,400 @@
+{% extends "admin/base.html" %}
+
+{% block title %}API Documentation{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header Section -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">API Documentation</h1>
+            <p class="mt-2 text-lg text-gray-500">Complete guide to Instagram Farm API endpoints</p>
+        </div>
+
+        <!-- Authentication Notice -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">Authentication Required</h3>
+                    <p class="mt-2 text-sm text-yellow-700">All API endpoints require proper authentication. Contact administrator for API access credentials.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Navigation -->
+        <div class="bg-white shadow rounded-lg mb-8">
+            <div class="p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Navigation</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <a href="#device-endpoints" class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100">
+                        <h3 class="font-medium text-gray-900">Device Endpoints</h3>
+                        <p class="text-sm text-gray-500">Manage devices and their status</p>
+                    </a>
+                    <a href="#instagram-endpoints" class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100">
+                        <h3 class="font-medium text-gray-900">Instagram Endpoints</h3>
+                        <p class="text-sm text-gray-500">Account and automation actions</p>
+                    </a>
+                    <a href="#task-endpoints" class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100">
+                        <h3 class="font-medium text-gray-900">Task Endpoints</h3>
+                        <p class="text-sm text-gray-500">Monitor and manage tasks</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Endpoints -->
+        <div id="device-endpoints" class="bg-white shadow rounded-lg mb-8">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Device Endpoints</h2>
+                
+                <!-- List Devices -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">GET</span>
+                        <code class="ml-3 text-sm font-mono">/api/devices/list</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">List Available Devices</h3>
+                    <p class="text-gray-600 mt-2">Get a list of all available (unassigned) devices and their status.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Response Example:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "success": true,
+    "devices": [
+        {
+            "id": 1,
+            "device_id": "device123",
+            "device_name": "P1",
+            "status": "connected",
+            "last_seen": "2024-01-30T12:00:00Z",
+            "is_initialized": true,
+            "instagram_accounts": [
+                {
+                    "username": "user123",
+                    "login_status": true,
+                    "last_login": "2024-01-30T12:00:00Z"
+                }
+            ]
+        }
+    ]
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Get User Devices -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">GET</span>
+                        <code class="ml-3 text-sm font-mono">/api/devices/user/{user_id}</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Get User's Devices</h3>
+                    <p class="text-gray-600 mt-2">Get all devices assigned to a specific user.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Path Parameters:</h4>
+                        <ul class="mt-2 list-disc list-inside text-sm text-gray-600">
+                            <li>user_id (string, required): The ID of the user</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Create Device -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/devices/create</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Create New Device</h3>
+                    <p class="text-gray-600 mt-2">Register a new device in the system.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "name": "P1"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Assign Device -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/devices/assign</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Assign Device</h3>
+                    <p class="text-gray-600 mt-2">Assign a device to a user.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "user_id": "user123",
+    "count": 1  // Optional: Number of devices to assign
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Delete Device -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-red-800 bg-red-100 rounded-full">DELETE</span>
+                        <code class="ml-3 text-sm font-mono">/api/devices/{device_id}</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Delete Device</h3>
+                    <p class="text-gray-600 mt-2">Remove a device from the system.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instagram Endpoints -->
+        <div id="instagram-endpoints" class="bg-white shadow rounded-lg mb-8">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Instagram Endpoints</h2>
+
+                <!-- Login -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/login</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Login to Instagram</h3>
+                    <p class="text-gray-600 mt-2">Login to an Instagram account on a specific device.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "password": "pass123",
+    "email": "optional@email.com",  // Optional
+    "email_password": "optional_email_pass"  // Optional
+}</pre>
+                    </div>
+                </div>
+
+                <!-- List Instagram Accounts -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">GET</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/accounts/list</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">List Instagram Accounts</h3>
+                    <p class="text-gray-600 mt-2">Get a list of all Instagram accounts with optional filtering.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Query Parameters:</h4>
+                        <ul class="mt-2 list-disc list-inside text-sm text-gray-600">
+                            <li>device_id (string, optional): Filter by device ID</li>
+                            <li>login_status (boolean, optional): Filter by login status</li>
+                            <li>username (string, optional): Filter by username</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Like Post -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/actions/like-post</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Like Post</h3>
+                    <p class="text-gray-600 mt-2">Like a post from a target user.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "target_username": "target_user"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Follow User -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/actions/follow</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Follow User</h3>
+                    <p class="text-gray-600 mt-2">Follow a target Instagram user.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "target_username": "target_user"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Unfollow User -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/actions/unfollow</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Unfollow User</h3>
+                    <p class="text-gray-600 mt-2">Unfollow a target Instagram user.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "target_username": "target_user"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- View Story -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/actions/view-story</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">View Story</h3>
+                    <p class="text-gray-600 mt-2">View a user's Instagram story.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "target_username": "target_user"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Like Story -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/actions/like-story</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Like Story</h3>
+                    <p class="text-gray-600 mt-2">Like a user's Instagram story.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "target_username": "target_user"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Comment Story -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-blue-800 bg-blue-100 rounded-full">POST</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/actions/comment-story</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Comment on Story</h3>
+                    <p class="text-gray-600 mt-2">Comment on a user's Instagram story.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Request Body:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "device_id": "device123",
+    "username": "user123",
+    "target_username": "target_user",
+    "comment": "👏"  // Optional, defaults to "👏"
+}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Endpoints -->
+        <div id="task-endpoints" class="bg-white shadow rounded-lg mb-8">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Task Endpoints</h2>
+
+                <!-- Get Task Status -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">GET</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/tasks/{task_id}</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">Get Task Status</h3>
+                    <p class="text-gray-600 mt-2">Get the status of a specific task.</p>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-medium text-gray-900">Response Example:</h4>
+                        <pre class="mt-2 p-4 bg-gray-50 rounded-lg overflow-x-auto text-sm">
+{
+    "success": true,
+    "task": {
+        "task_id": "task123",
+        "task_type": "like_post",
+        "status": "completed",
+        "created_at": "2024-01-30T12:00:00Z",
+        "completed_at": "2024-01-30T12:01:00Z",
+        "result": "Post liked successfully"
+    }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- List All Tasks -->
+                <div class="mb-8">
+                    <div class="flex items-center">
+                        <span class="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">GET</span>
+                        <code class="ml-3 text-sm font-mono">/api/instagram/tasks</code>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-3">List All Tasks</h3>
+                    <p class="text-gray-600 mt-2">Get a list of all tasks and their status.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Codes -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Response Codes</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-900">Success Codes</h3>
+                        <ul class="mt-2 space-y-2 text-sm">
+                            <li class="flex items-center">
+                                <span class="w-16 font-mono">200</span>
+                                <span class="text-gray-600">Request successful</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-16 font-mono">201</span>
+                                <span class="text-gray-600">Resource created</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-900">Error Codes</h3>
+                        <ul class="mt-2 space-y-2 text-sm">
+                            <li class="flex items-center">
+                                <span class="w-16 font-mono">400</span>
+                                <span class="text-gray-600">Bad request</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-16 font-mono">401</span>
+                                <span class="text-gray-600">Unauthorized</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-16 font-mono">404</span>
+                                <span class="text-gray-600">Resource not found</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-16 font-mono">500</span>
+                                <span class="text-gray-600">Server error</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

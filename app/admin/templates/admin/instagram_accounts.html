@@ -1,0 +1,446 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Instagram Accounts{% endblock %}
+
+{% block head %}
+<script>
+    // Define all functions globally
+    function deleteAccount(username) {
+        if (!confirm(`Are you sure you want to delete the account "${username}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        fetch(`/api/instagram/accounts/${username}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Find and remove the row
+                const rows = document.querySelectorAll('tbody tr');
+                for (const row of rows) {
+                    const rowUsername = row.querySelector('.text-gray-900').textContent;
+                    if (rowUsername === username) {
+                        row.remove();
+                        break;
+                    }
+                }
+                // Show success message
+                alert('Account deleted successfully');
+                // Refresh the page to update statistics
+                location.reload();
+            } else {
+                alert(`Failed to delete account: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            alert(`Error deleting account: ${error}`);
+        });
+    }
+
+    function editAccount(username) {
+        alert('Edit functionality coming soon');
+    }
+
+    function bulkDeleteAccounts() {
+        const selectedAccounts = Array.from(document.querySelectorAll('input[name="selected_accounts"]:checked'))
+            .map(checkbox => checkbox.value);
+
+        if (selectedAccounts.length === 0) {
+            alert('Please select at least one account to delete');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${selectedAccounts.length} selected accounts? This action cannot be undone.`)) {
+            return;
+        }
+
+        fetch('/api/instagram/accounts/bulk-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usernames: selectedAccounts
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(`Failed to delete accounts: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            alert(`Error during bulk delete: ${error}`);
+        });
+    }
+
+    function toggleSelectAll(checkbox) {
+        document.querySelectorAll('input[name="selected_accounts"]')
+            .forEach(item => item.checked = checkbox.checked);
+    }
+
+    function filterAccounts() {
+        const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const deviceFilter = document.getElementById('deviceFilter').value;
+        
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+            const username = row.querySelector('.text-gray-900').textContent.toLowerCase();
+            const email = row.querySelector('.text-gray-500')?.textContent.toLowerCase() || '';
+            const status = row.querySelector('.rounded-full').textContent.trim().toLowerCase() === 'active';
+            const deviceId = row.querySelector('td:nth-child(3)').textContent.trim();
+            
+            const matchesSearch = username.includes(searchTerm) || email.includes(searchTerm);
+            const matchesStatus = statusFilter === '' || status.toString() === statusFilter;
+            const matchesDevice = deviceFilter === '' || deviceId.includes(deviceFilter);
+            
+            row.style.display = matchesSearch && matchesStatus && matchesDevice ? '' : 'none';
+        });
+    }
+
+    // Add event listeners when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const accountSearch = document.getElementById('accountSearch');
+        const statusFilter = document.getElementById('statusFilter');
+        const deviceFilter = document.getElementById('deviceFilter');
+
+        if (accountSearch) accountSearch.addEventListener('input', filterAccounts);
+        if (statusFilter) statusFilter.addEventListener('change', filterAccounts);
+        if (deviceFilter) deviceFilter.addEventListener('change', filterAccounts);
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header Section -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Instagram Accounts</h1>
+                    <p class="mt-1 text-sm text-gray-500">Manage and monitor your Instagram accounts</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Overview Cards -->
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+            <!-- Total Accounts -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Total Accounts</dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">{{ instagram_accounts|length }}</div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Accounts -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Active Accounts</dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {{ instagram_accounts|selectattr('login_status', 'true')|list|length }}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Actions -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Today's Actions</dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {% set daily_total = namespace(value=0) %}
+                                        {% for account in instagram_accounts %}
+                                            {% set daily_total.value = daily_total.value + 
+                                                account.daily_likes + 
+                                                account.daily_comments + 
+                                                account.daily_follows +
+                                                account.daily_unfollows +
+                                                account.daily_stories_viewed +
+                                                account.daily_story_likes +
+                                                account.daily_dms %}
+                                        {% endfor %}
+                                        {{ daily_total.value }}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Actions -->
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-6 w-6 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">Total Actions</dt>
+                                <dd class="flex items-baseline">
+                                    <div class="text-2xl font-semibold text-gray-900">
+                                        {% set total = namespace(value=0) %}
+                                        {% for account in instagram_accounts %}
+                                            {% set total.value = total.value + 
+                                                account.total_likes + 
+                                                account.total_comments + 
+                                                account.total_follows +
+                                                account.total_unfollows +
+                                                account.total_stories_viewed +
+                                                account.total_story_likes +
+                                                account.total_dms %}
+                                        {% endfor %}
+                                        {{ total.value }}
+                                    </div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white shadow rounded-lg mb-8">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                        <label for="accountSearch" class="block text-sm font-medium text-gray-700">Search Accounts</label>
+                        <input type="text" id="accountSearch" placeholder="Search by username or email" 
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="statusFilter" class="block text-sm font-medium text-gray-700">Status</label>
+                        <select id="statusFilter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="">All Status</option>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="deviceFilter" class="block text-sm font-medium text-gray-700">Device</label>
+                        <select id="deviceFilter" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="">All Devices</option>
+                            {% for device in devices %}
+                            <option value="{{ device.device_id }}">{{ device.device_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts Table -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <input type="checkbox" 
+                                       class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                       onclick="toggleSelectAll(this)">
+                            </th>
+                            <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                            <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                            <th scope="col" class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Daily Stats</th>
+                            <th scope="col" class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Stats</th>
+                            <th scope="col" class="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for account in instagram_accounts %}
+                        <tr class="hover:bg-gray-50">
+                            <!-- Selection Checkbox -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="checkbox" 
+                                       name="selected_accounts" 
+                                       value="{{ account.username }}"
+                                       class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            </td>
+                            <!-- Account Info -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <span class="text-gray-500 font-medium">{{ account.username[0]|upper }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.username }}</div>
+                                        <div class="text-sm text-gray-500">{{ account.email }}</div>
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                            {% if account.login_status %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                            {{ 'Active' if account.login_status else 'Inactive' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Device Info -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if account.device_id %}
+                                <div class="text-sm text-gray-900">{{ account.device_id }}</div>
+                                <div class="text-xs text-gray-500">Last login: {{ account.format_last_login() }}</div>
+                                {% else %}
+                                <span class="text-sm text-gray-500">Not assigned</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Daily Stats -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="grid grid-cols-4 gap-2">
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_likes }}</div>
+                                        <div class="text-xs text-gray-500">Likes</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_follows }}</div>
+                                        <div class="text-xs text-gray-500">Follows</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_unfollows }}</div>
+                                        <div class="text-xs text-gray-500">Unfollows</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_dms }}</div>
+                                        <div class="text-xs text-gray-500">DMs</div>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-4 gap-2">
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_comments }}</div>
+                                        <div class="text-xs text-gray-500">Comments</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_stories_viewed }}</div>
+                                        <div class="text-xs text-gray-500">Stories</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.daily_story_likes }}</div>
+                                        <div class="text-xs text-gray-500">Story Likes</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Total Stats -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="grid grid-cols-4 gap-2">
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_likes }}</div>
+                                        <div class="text-xs text-gray-500">Likes</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_follows }}</div>
+                                        <div class="text-xs text-gray-500">Follows</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_unfollows }}</div>
+                                        <div class="text-xs text-gray-500">Unfollows</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_dms }}</div>
+                                        <div class="text-xs text-gray-500">DMs</div>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-4 gap-2">
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_comments }}</div>
+                                        <div class="text-xs text-gray-500">Comments</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_stories_viewed }}</div>
+                                        <div class="text-xs text-gray-500">Stories</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-sm font-medium text-gray-900">{{ account.total_story_likes }}</div>
+                                        <div class="text-xs text-gray-500">Story Likes</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end space-x-2">
+                                    <button onclick="editAccount('{{ account.username }}')" 
+                                            class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                    <button onclick="deleteAccount('{{ account.username }}')" 
+                                            class="text-red-600 hover:text-red-900">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="mt-4 flex justify-end">
+            <button onclick="bulkDeleteAccounts()" 
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                Delete Selected
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,13 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Cors
+Flask-Login
+SQLAlchemy
+alembic
+python-dotenv
+uiautomator2
+Pillow
+pytesseract
+emoji
+requests

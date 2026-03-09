@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %} - Instagram Farm Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-2xl font-bold text-gray-800">Instagram Farm Admin</h1>
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('admin.dashboard') }}" class="text-gray-600 hover:text-gray-800">Dashboard</a>
+                    <a href="{{ url_for('admin.devices') }}" class="text-gray-600 hover:text-gray-800">Devices</a>
+                    <a href="{{ url_for('admin.instagram_accounts') }}" class="text-gray-600 hover:text-gray-800">Instagram Accounts</a>
+                    <a href="{{ url_for('admin.tasks') }}" class="text-gray-600 hover:text-gray-800">Task Manager</a>
+                    <a href="{{ url_for('admin.api_docs') }}" class="text-gray-600 hover:text-gray-800">API Docs</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 px-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

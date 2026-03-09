@@ -1,0 +1,195 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Task Manager{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Task Manager</h2>
+                <p class="text-sm text-gray-500 mt-1">Monitor and manage background tasks</p>
+            </div>
+            <div class="flex space-x-4">
+                <div class="flex space-x-2">
+                    <input type="text" id="taskSearch" placeholder="Search tasks..." 
+                        class="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="statusFilter" class="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="running">Running</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                    <select id="typeFilter" class="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Types</option>
+                        <option value="like_post">Like Post</option>
+                        <option value="comment_story">Comment Story</option>
+                        <option value="follow_user">Follow User</option>
+                        <option value="view_story">View Story</option>
+                    </select>
+                </div>
+                <button onclick="refreshTasks()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm text-gray-500">Total Tasks</div>
+                <div class="text-2xl font-bold text-gray-800">{{ tasks|length }}</div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm text-gray-500">Running Tasks</div>
+                <div class="text-2xl font-bold text-blue-600">
+                    {{ tasks|selectattr('status', 'equalto', 'running')|list|length }}
+                </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm text-gray-500">Completed Tasks</div>
+                <div class="text-2xl font-bold text-green-600">
+                    {{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}
+                </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm text-gray-500">Failed Tasks</div>
+                <div class="text-2xl font-bold text-red-600">
+                    {{ tasks|selectattr('status', 'equalto', 'failed')|list|length }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full table-auto">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="tasksTableBody">
+                    {% for task in tasks %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ task.task_id }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ task.task_type }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if task.status == 'completed' %}bg-green-100 text-green-800
+                                {% elif task.status == 'running' %}bg-blue-100 text-blue-800
+                                {% elif task.status == 'failed' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ task.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ task.params.username }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ task.params.target_username }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ task.created_at }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">
+                                {% if task.completed_at %}
+                                    {{ task.completed_at }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm {% if task.error %}text-red-600{% else %}text-gray-900{% endif %}">
+                                {{ task.error or task.result or '-' }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtering functionality
+    const taskSearch = document.getElementById('taskSearch');
+    const statusFilter = document.getElementById('statusFilter');
+    const typeFilter = document.getElementById('typeFilter');
+
+    if (taskSearch) taskSearch.addEventListener('input', filterTasks);
+    if (statusFilter) statusFilter.addEventListener('change', filterTasks);
+    if (typeFilter) typeFilter.addEventListener('change', filterTasks);
+
+    function filterTasks() {
+        const searchTerm = taskSearch.value.toLowerCase();
+        const statusValue = statusFilter.value.toLowerCase();
+        const typeValue = typeFilter.value.toLowerCase();
+        const rows = document.getElementById('tasksTableBody').getElementsByTagName('tr');
+
+        Array.from(rows).forEach(row => {
+            const taskId = row.cells[0].textContent.toLowerCase();
+            const taskType = row.cells[1].textContent.toLowerCase();
+            const status = row.cells[2].textContent.toLowerCase();
+            const account = row.cells[3].textContent.toLowerCase();
+            const target = row.cells[4].textContent.toLowerCase();
+            
+            const matchesSearch = taskId.includes(searchTerm) || 
+                                taskType.includes(searchTerm) || 
+                                account.includes(searchTerm) || 
+                                target.includes(searchTerm);
+            const matchesStatus = !statusValue || status.includes(statusValue);
+            const matchesType = !typeValue || taskType.includes(typeValue);
+
+            row.style.display = matchesSearch && matchesStatus && matchesType ? '' : 'none';
+        });
+    }
+
+    // Auto-refresh functionality
+    let refreshInterval;
+
+    function startAutoRefresh() {
+        refreshInterval = setInterval(refreshTasks, 30000); // Refresh every 30 seconds
+    }
+
+    function stopAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    }
+
+    window.refreshTasks = function() {
+        window.location.reload();
+    }
+
+    // Start auto-refresh when page loads
+    startAutoRefresh();
+
+    // Stop auto-refresh when page is hidden
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    });
+});
+</script>
+{% endblock %} 
