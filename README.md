@@ -223,6 +223,48 @@ This app can use **GNIrehtet** to provide internet from your PC to all connected
 - **Integration with this app**:
   - Device bulk operations include actions like `start_gnirehtet` and `stop_gnirehtet`, which assume GNIrehtet is installed and available on the host machine.
 
+
+📦 Installation of Web Mirror Screen for Android Phones
+
+Install the required package:
+
+pip install mysc[full]
+
+This installs all required dependencies including the web interface and mirroring tools.
+
+▶️ Running the Web Interface
+
+After installation, start the mirror control panel via Command Line:
+
+mysc-web
+
+The system will automatically:
+
+analyze connected devices
+
+initialize the mirroring service
+
+launch the web dashboard
+
+By default the panel runs on:
+
+http://localhost:51000
+🌐 Remote Access (Optional)
+
+If you want to access the panel remotely, you can create a web proxy using LocaltoNet.
+
+Example
+
+Create a tunnel for port:
+
+51000
+
+After connecting, LocaltoNet will generate a public URL such as:
+
+https://yourdomain.localtonet.com
+
+You can now access the mirror dashboard remotely from any browser.
+
 ## API Overview
 
 All API endpoints return JSON.
