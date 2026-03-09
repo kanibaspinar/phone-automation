@@ -96,7 +96,7 @@ Both commands should show Python 3.11 and a pip version.
 
 ```bash
 git clone https://github.com/kanibaspinar/phone-automation.git
-cd <your-repo-name>
+cd <phone-automation>
 ```
 
 ### 2. Create and activate a virtual environment
