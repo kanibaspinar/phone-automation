@@ -305,7 +305,7 @@ These pages use the same underlying database models (`Device`, `InstagramAccount
 - **Premium support / custom integrations**:
   - Telegram: [`@kanibaspinar`](https://t.me/kanibaspinar)
   - Email: `kanibaspinar07@gmail.com`
-
+- Sharingtools Integration is free. 
 ## License
 
 Add your license of choice here (for example, MIT, Apache 2.0, or proprietary), and include the corresponding `LICENSE` file in the repository.
