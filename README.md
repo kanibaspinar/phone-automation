@@ -95,7 +95,7 @@ Both commands should show Python 3.11 and a pip version.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo-name>.git
+git clone https://github.com/kanibaspinar/phone-automation.git
 cd <your-repo-name>
 ```
 
