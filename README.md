@@ -1,5 +1,5 @@
 ## Instagram Automation & Device Manager
-Join to Discussion : [t.me/](https://t.me/phonefarmers)
+Join to Discussion : [Phone Farmers](https://t.me/phonefarmers)
 A Flask-based web application and API for managing Android devices and automating Instagram actions (login, follow/unfollow, likes, comments, stories, DMs, reels, photo posts, and more) using `uiautomator2`, ADB, and a task manager.
 <img width="3290" height="1026" alt="image" src="https://github.com/user-attachments/assets/1b984807-7956-468b-9978-c8c387661099" />
 <img width="3285" height="1605" alt="image" src="https://github.com/user-attachments/assets/a65013b4-8a9c-4dfe-94ed-7b54bf4108c6" />
