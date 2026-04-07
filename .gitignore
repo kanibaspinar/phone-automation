@@ -28,6 +28,8 @@ uploads/
 !msys-usb-1.0.dll
 !zlib1.dll
 *.apk
+!app-uiautomator.apk
+!app-uiautomator-test.apk
 *.zip
 *.png
 *.vbs
