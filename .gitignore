@@ -12,8 +12,17 @@ uploads/
 # Environment
 .env
 
-# Binary / platform tools
+# Binaries — root level (allow specific ones)
 *.exe
+!adb.exe
+!fastboot.exe
+!etc1tool.exe
+!hprof-conv.exe
+!make_f2fs.exe
+!make_f2fs_casefold.exe
+!mke2fs.exe
+!sqlite3.exe
+
 *.dll
 !avcodec-*.dll
 !avformat-*.dll
@@ -27,22 +36,25 @@ uploads/
 !libusb-1.0.dll
 !msys-usb-1.0.dll
 !zlib1.dll
+
 *.apk
 !app-uiautomator.apk
 !app-uiautomator-test.apk
+
+# Keep config/text files
+!mke2fs.conf
+!source.properties
+!NOTICE.txt
+!apk_version.txt
+!sync.sh
+!open_a_terminal_here.bat
+
+# Ignore these specifically
 *.zip
 *.png
 *.vbs
-*.cmd
+screenshot.png
 scrcpy*
 gnirehtet*
 platform-tools/
-assets/
-mke2fs.conf
-source.properties
-sync.sh
-open_a_terminal_here.bat
-NOTICE.txt
-apk_version.txt
 dumper.py
-screenshot.png
