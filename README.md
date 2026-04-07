@@ -345,6 +345,5 @@ flask db upgrade
 
 ---
 
-## License
 
-Add your license of choice here (MIT, Apache 2.0, or proprietary) and include the corresponding `LICENSE` file.
+
