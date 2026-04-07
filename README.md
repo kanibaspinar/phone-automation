@@ -3,6 +3,14 @@
 A Flask-based web application and REST API for managing Android devices and automating both **Instagram** and **TikTok** actions (login, follow/unfollow, likes, comments, stories, DMs, reels, photo posts, and more) using `uiautomator2`, ADB, and a task manager.
 
 ---
+<img width="3827" height="1455" alt="image" src="https://github.com/user-attachments/assets/3c36675a-1b34-488b-bec5-232198ffe3a3" />
+
+<img width="3829" height="1070" alt="image" src="https://github.com/user-attachments/assets/8ec787d6-66ec-4f59-8527-4ada26da6b11" />
+
+<img width="3834" height="1158" alt="image" src="https://github.com/user-attachments/assets/47316868-b457-4f1c-b88b-51f61305943d" />
+<img width="3828" height="1154" alt="image" src="https://github.com/user-attachments/assets/b53bde07-36bd-4d66-bdbb-769e2897c8d5" />
+<img width="3820" height="1137" alt="image" src="https://github.com/user-attachments/assets/8a2103e6-d4dc-4e80-97e7-d148f37ff458" />
+<img width="3832" height="1515" alt="image" src="https://github.com/user-attachments/assets/f5fa4e7e-c256-4994-a95c-98bd3db16026" />
 
 ## Features
 
