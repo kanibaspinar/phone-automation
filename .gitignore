@@ -15,6 +15,18 @@ uploads/
 # Binary / platform tools
 *.exe
 *.dll
+!avcodec-*.dll
+!avformat-*.dll
+!avutil-*.dll
+!swresample-*.dll
+!swscale-*.dll
+!SDL2.dll
+!AdbWinApi.dll
+!AdbWinUsbApi.dll
+!libwinpthread-1.dll
+!libusb-1.0.dll
+!msys-usb-1.0.dll
+!zlib1.dll
 *.apk
 *.zip
 *.png
