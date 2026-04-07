@@ -1,0 +1,33 @@
+migrations/
+__pycache__/
+.claude/
+venv/
+uploads/
+
+# Database
+*.db
+*.sqlite3
+
+# Environment
+.env
+
+# Binary / platform tools
+*.exe
+*.dll
+*.apk
+*.zip
+*.png
+*.vbs
+*.cmd
+scrcpy*
+gnirehtet*
+platform-tools/
+assets/
+mke2fs.conf
+source.properties
+sync.sh
+open_a_terminal_here.bat
+NOTICE.txt
+apk_version.txt
+dumper.py
+screenshot.png

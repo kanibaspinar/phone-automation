@@ -1,0 +1,37 @@
+# ── Web framework ────────────────────────────────────────────────────────────
+Flask==3.0.3
+Werkzeug==3.0.3
+flask-cors==4.0.0
+flask-login==0.6.3
+flask-limiter==3.7.0
+flask-socketio==5.3.6
+
+# ── Database ─────────────────────────────────────────────────────────────────
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.30
+Flask-Migrate==4.0.7
+alembic==1.13.2
+
+# ── Task scheduling ───────────────────────────────────────────────────────────
+APScheduler==3.10.4
+
+# ── Android device automation ────────────────────────────────────────────────
+uiautomator2==3.2.0
+adbutils==2.9.0
+
+# ── Image processing & OCR ───────────────────────────────────────────────────
+Pillow==10.3.0
+pytesseract==0.3.10
+opencv-python==4.10.0.84
+numpy==1.26.4
+
+# ── NLP / text analysis ──────────────────────────────────────────────────────
+langdetect==1.0.9
+gender-guesser==0.4.0
+emoji==2.12.1
+
+# ── HTTP ─────────────────────────────────────────────────────────────────────
+requests==2.32.3
+
+# ── Config / env ─────────────────────────────────────────────────────────────
+python-dotenv==1.0.1

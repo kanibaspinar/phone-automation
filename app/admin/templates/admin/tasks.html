@@ -1,0 +1,260 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Task Manager{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Task Manager</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Monitor background automation tasks</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" id="autoRefresh" checked
+                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600">
+            <span>Auto-refresh</span>
+        </label>
+        <button onclick="loadTasks()"
+                class="btn-ghost text-xs py-1.5 px-3">
+            <i class="fas fa-sync-alt text-xs"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Total</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1" id="stat-total">—</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Running</p>
+        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1" id="stat-running">—</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Completed</p>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1" id="stat-completed">—</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Failed</p>
+        <p class="text-2xl font-bold text-red-500 dark:text-red-400 mt-1" id="stat-failed">—</p>
+    </div>
+</div>
+
+<!-- Filters + Tabs row -->
+<div class="card p-3 mb-4 flex flex-wrap items-center gap-3">
+    <!-- Platform tabs -->
+    <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 text-xs font-medium">
+        <button id="tab-all" onclick="setTab('all')"
+                class="tab-btn px-3 py-1.5 bg-indigo-600 text-white transition-colors">All</button>
+        <button id="tab-instagram" onclick="setTab('instagram')"
+                class="tab-btn px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+            <i class="fab fa-instagram mr-1"></i>Instagram
+        </button>
+        <button id="tab-tiktok" onclick="setTab('tiktok')"
+                class="tab-btn px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+            <i class="fab fa-tiktok mr-1"></i>TikTok
+        </button>
+    </div>
+
+    <input type="text" id="taskSearch" placeholder="Search…" class="input w-44 text-xs py-1.5">
+
+    <select id="statusFilter" class="input w-32 text-xs py-1.5">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="running">Running</option>
+        <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
+    </select>
+</div>
+
+<!-- Tasks Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b border-gray-100 dark:border-gray-700">
+                    <th class="th">Platform</th>
+                    <th class="th">Task ID</th>
+                    <th class="th">Action</th>
+                    <th class="th">Status</th>
+                    <th class="th">Account</th>
+                    <th class="th">Target</th>
+                    <th class="th">Created</th>
+                    <th class="th">Duration</th>
+                    <th class="th">Result / Error</th>
+                    <th class="th text-right">Stop</th>
+                </tr>
+            </thead>
+            <tbody id="tasksTableBody" class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                <tr>
+                    <td colspan="10" class="td text-center text-gray-400 dark:text-gray-500 py-10">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading tasks…
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allTasks = [];
+let currentTab = 'all';
+let refreshTimer = null;
+
+// ── badges ────────────────────────────────────────────────────────────────────
+
+function statusBadge(s) {
+    const cls = {
+        completed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400',
+        running:   'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400',
+        failed:    'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400',
+        pending:   'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    }[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+    return `<span class="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${cls}">${s}</span>`;
+}
+
+function platformBadge(p) {
+    if (p === 'instagram')
+        return '<span class="px-2 py-0.5 inline-flex items-center gap-1 text-xs font-medium rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"><i class="fab fa-instagram text-xs"></i>IG</span>';
+    return '<span class="px-2 py-0.5 inline-flex items-center gap-1 text-xs font-medium rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"><i class="fab fa-tiktok text-xs"></i>TT</span>';
+}
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── load & render ─────────────────────────────────────────────────────────────
+
+async function loadTasks() {
+    try {
+        const [igR, ttR] = await Promise.all([
+            fetch('/api/instagram/tasks'),
+            fetch('/api/tiktok/tasks'),
+        ]);
+        const igData = igR.ok ? await igR.json() : { tasks: [] };
+        const ttData = ttR.ok ? await ttR.json() : { tasks: [] };
+
+        const igTasks = (igData.tasks || []).map(t => ({ ...t, platform: 'instagram' }));
+        const ttTasks = (ttData.tasks || []).map(t => ({ ...t, platform: 'tiktok' }));
+
+        allTasks = [...igTasks, ...ttTasks].sort((a, b) =>
+            new Date(b.created_at) - new Date(a.created_at));
+
+        renderTasks();
+    } catch (e) {
+        console.error('Failed to load tasks:', e);
+    }
+}
+
+function renderTasks() {
+    const search    = document.getElementById('taskSearch').value.toLowerCase();
+    const statusVal = document.getElementById('statusFilter').value;
+
+    const filtered = allTasks.filter(t => {
+        if (currentTab !== 'all' && t.platform !== currentTab) return false;
+        if (statusVal && t.status !== statusVal) return false;
+        if (search) {
+            const hay = [t.task_id, t.task_type, t.username, t.target_username, t.action || '', t.platform].join(' ').toLowerCase();
+            if (!hay.includes(search)) return false;
+        }
+        return true;
+    });
+
+    document.getElementById('stat-total').textContent     = filtered.length;
+    document.getElementById('stat-running').textContent   = filtered.filter(t => t.status === 'running').length;
+    document.getElementById('stat-completed').textContent = filtered.filter(t => t.status === 'completed').length;
+    document.getElementById('stat-failed').textContent    = filtered.filter(t => t.status === 'failed').length;
+
+    const tbody = document.getElementById('tasksTableBody');
+
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="td text-center text-gray-400 dark:text-gray-500 py-10">No tasks found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(t => {
+        const canStop = t.platform === 'tiktok' && t.task_type === 'run_collection' && t.status === 'running';
+        const stopBtn = canStop
+            ? `<button onclick="stopTask('${t.task_id}','tiktok')"
+                       class="text-xs px-2 py-1 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                   <i class="fas fa-stop text-xs"></i> Stop
+               </button>`
+            : '';
+        const action = (t.action || t.task_type || '').replace(/</g,'&lt;');
+        const resultOrErr = (t.error || t.result || '—').replace(/</g,'&lt;');
+        const errCls = t.error ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400';
+
+        return `
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <td class="td">${platformBadge(t.platform)}</td>
+            <td class="td"><span class="font-mono text-xs text-gray-400 dark:text-gray-500">${(t.task_id||'').slice(0,8)}…</span></td>
+            <td class="td max-w-[180px]"><span class="truncate block text-sm" title="${action}">${action}</span></td>
+            <td class="td">${statusBadge(t.status)}</td>
+            <td class="td text-sm text-gray-700 dark:text-gray-300">${t.username || '—'}</td>
+            <td class="td text-sm text-gray-700 dark:text-gray-300">${t.target_username || '—'}</td>
+            <td class="td text-xs text-gray-500 dark:text-gray-400">${fmtDate(t.created_at)}</td>
+            <td class="td text-xs text-gray-500 dark:text-gray-400">${t.duration || '—'}</td>
+            <td class="td max-w-[200px]"><span class="truncate block text-xs ${errCls}" title="${resultOrErr}">${resultOrErr}</span></td>
+            <td class="td text-right">${stopBtn}</td>
+        </tr>`;
+    }).join('');
+}
+
+// ── tabs ──────────────────────────────────────────────────────────────────────
+
+function setTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isActive = btn.id === 'tab-' + tab;
+        btn.classList.toggle('bg-indigo-600', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('bg-white', !isActive);
+        btn.classList.toggle('dark:bg-gray-700', !isActive);
+        btn.classList.toggle('text-gray-600', !isActive);
+        btn.classList.toggle('dark:text-gray-300', !isActive);
+    });
+    renderTasks();
+}
+
+// ── stop task ─────────────────────────────────────────────────────────────────
+
+async function stopTask(taskId, platform) {
+    const url = platform === 'tiktok' ? `/api/tiktok/tasks/${taskId}/stop` : `/api/instagram/tasks/${taskId}/stop`;
+    try {
+        const r = await fetch(url, { method: 'POST' });
+        const d = await r.json();
+        if (d.success) { showToast('Stop signal sent', 'info'); loadTasks(); }
+        else { showToast(d.error || 'Stop failed', 'error'); }
+    } catch (e) { showToast('Network error', 'error'); }
+}
+
+// ── auto refresh ──────────────────────────────────────────────────────────────
+
+function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    if (document.getElementById('autoRefresh').checked) {
+        refreshTimer = setTimeout(() => loadTasks().then(scheduleRefresh), 10000);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('taskSearch').addEventListener('input', renderTasks);
+    document.getElementById('statusFilter').addEventListener('change', renderTasks);
+    document.getElementById('autoRefresh').addEventListener('change', scheduleRefresh);
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) loadTasks().then(scheduleRefresh);
+        else clearTimeout(refreshTimer);
+    });
+
+    loadTasks().then(scheduleRefresh);
+});
+</script>
+{% endblock %}

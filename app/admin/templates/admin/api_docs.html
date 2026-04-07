@@ -1,0 +1,1089 @@
+{% extends "admin/base.html" %}
+
+{% block title %}API Docs{% endblock %}
+
+{% block head %}
+<style>
+    /* Sidebar nav */
+    .doc-sidebar {
+        position: sticky;
+        top: 4rem; /* below the fixed nav */
+        height: calc(100vh - 4rem);
+        overflow-y: auto;
+    }
+    .doc-sidebar a {
+        display: block;
+        padding: .3rem .75rem;
+        font-size: .8rem;
+        color: #6b7280;
+        border-left: 2px solid transparent;
+        text-decoration: none;
+        transition: all 120ms;
+    }
+    .doc-sidebar a:hover { color: #4f46e5; border-color: #c7d2fe; background: #f5f3ff; }
+    .doc-sidebar a.active { color: #4f46e5; border-color: #4f46e5; font-weight: 600; }
+    .doc-sidebar .group-label {
+        font-size: .65rem; font-weight: 700; letter-spacing: .08em;
+        text-transform: uppercase; color: #9ca3af;
+        padding: .75rem .75rem .25rem;
+    }
+    html.dark .doc-sidebar a { color: #9ca3af; }
+    html.dark .doc-sidebar a:hover { color: #818cf8; background: rgba(99,102,241,.08); border-color: #4338ca; }
+    html.dark .doc-sidebar a.active { color: #818cf8; border-color: #6366f1; }
+    html.dark .doc-sidebar .group-label { color: #6b7280; }
+
+    /* Endpoint card */
+    .ep { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #f3f4f6; }
+    html.dark .ep { border-color: #374151; }
+    .ep:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    /* Method badge */
+    .badge {
+        display: inline-flex; align-items: center;
+        padding: .2rem .55rem; border-radius: .375rem;
+        font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+        font-family: ui-monospace, monospace;
+    }
+    .badge-GET    { background: #dcfce7; color: #15803d; }
+    .badge-POST   { background: #dbeafe; color: #1d4ed8; }
+    .badge-PUT    { background: #fef3c7; color: #b45309; }
+    .badge-DELETE { background: #fee2e2; color: #b91c1c; }
+    html.dark .badge-GET    { background: rgba(21,128,61,.2);  color: #4ade80; }
+    html.dark .badge-POST   { background: rgba(29,78,216,.2);  color: #60a5fa; }
+    html.dark .badge-PUT    { background: rgba(180,83,9,.2);   color: #fbbf24; }
+    html.dark .badge-DELETE { background: rgba(185,28,28,.2);  color: #f87171; }
+
+    /* Code block */
+    pre.code {
+        background: #0f172a; color: #e2e8f0;
+        border-radius: .5rem; padding: 1rem;
+        font-size: .78rem; overflow-x: auto;
+        line-height: 1.6; margin-top: .5rem;
+    }
+    html.dark pre.code { background: #020617; }
+
+    /* Field table */
+    .field-table { width: 100%; border-collapse: collapse; font-size: .8rem; margin-top: .5rem; }
+    .field-table th {
+        text-align: left; padding: .4rem .6rem;
+        background: #f9fafb; color: #6b7280;
+        font-weight: 600; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em;
+    }
+    html.dark .field-table th { background: #1f2937; color: #9ca3af; }
+    .field-table td { padding: .4rem .6rem; border-top: 1px solid #f3f4f6; vertical-align: top; }
+    html.dark .field-table td { border-color: #374151; color: #d1d5db; }
+    .field-table td code {
+        font-family: ui-monospace, monospace; font-size: .75rem;
+        background: #f3f4f6; padding: .1rem .3rem; border-radius: .25rem; color: #4f46e5;
+    }
+    html.dark .field-table td code { background: #374151; color: #a5b4fc; }
+    .req  { color: #dc2626; font-size: .65rem; font-weight: 700; }
+    .opt  { color: #9ca3af; font-size: .65rem; }
+
+    /* Section heading */
+    .section-title {
+        font-size: 1.125rem; font-weight: 700;
+        color: #111827; margin-bottom: 1.25rem;
+        padding-bottom: .5rem; border-bottom: 2px solid #e5e7eb;
+        scroll-margin-top: 5rem;
+    }
+    html.dark .section-title { color: #f9fafb; border-color: #374151; }
+
+    /* Inline code */
+    .icode {
+        font-family: ui-monospace, monospace; font-size: .82rem;
+        background: #f3f4f6; padding: .15rem .4rem; border-radius: .3rem;
+        color: #1f2937;
+    }
+    html.dark .icode { background: #374151; color: #e5e7eb; }
+
+    /* Search highlight */
+    mark { background: #fde68a; border-radius: .2rem; }
+    html.dark mark { background: #92400e; color: #fef3c7; }
+
+    /* Scrollbar sidebar */
+    .doc-sidebar::-webkit-scrollbar { width: 4px; }
+    .doc-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .doc-sidebar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+    html.dark .doc-sidebar::-webkit-scrollbar-thumb { background: #374151; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex gap-6">
+
+    <!-- ── Sticky Sidebar ────────────────────────────────────────────────── -->
+    <aside class="doc-sidebar hidden lg:block w-52 flex-shrink-0">
+        <div class="group-label">Overview</div>
+        <a href="#overview">Base URL & Format</a>
+        <a href="#status-codes">Status Codes</a>
+
+        <div class="group-label">Devices</div>
+        <a href="#dev-list">List Devices</a>
+        <a href="#dev-create">Create Device</a>
+        <a href="#dev-update">Update Device</a>
+        <a href="#dev-delete">Delete Device</a>
+        <a href="#dev-assign">Assign to User</a>
+        <a href="#dev-unassign">Unassign</a>
+        <a href="#dev-user">User's Devices</a>
+        <a href="#dev-free">Free Devices</a>
+        <a href="#dev-bulk">Bulk Operations</a>
+
+        <div class="group-label">Instagram — Accounts</div>
+        <a href="#ig-add">Add Account</a>
+        <a href="#ig-bulk-add">Bulk Add</a>
+        <a href="#ig-list">List Accounts</a>
+        <a href="#ig-delete">Delete Account</a>
+        <a href="#ig-bulk-delete">Bulk Delete</a>
+        <a href="#ig-login">Login</a>
+        <a href="#ig-logout">Logout</a>
+
+        <div class="group-label">Instagram — Actions</div>
+        <a href="#ig-like-post">Like Post</a>
+        <a href="#ig-comment-post">Comment Post</a>
+        <a href="#ig-follow">Follow</a>
+        <a href="#ig-unfollow">Unfollow</a>
+        <a href="#ig-view-story">View Story</a>
+        <a href="#ig-like-story">Like Story</a>
+        <a href="#ig-comment-story">Comment Story</a>
+        <a href="#ig-send-dm">Send DM</a>
+        <a href="#ig-post-reel">Post Reel</a>
+        <a href="#ig-post-photo">Post Photo</a>
+        <a href="#ig-upload-media">Upload Media</a>
+
+        <div class="group-label">Instagram — Tasks</div>
+        <a href="#ig-tasks-list">All Tasks</a>
+        <a href="#ig-task-status">Task Status</a>
+
+        <div class="group-label">TikTok — Accounts</div>
+        <a href="#tt-add">Add Account</a>
+        <a href="#tt-list">List Accounts</a>
+        <a href="#tt-update">Update Config</a>
+        <a href="#tt-delete">Delete Account</a>
+        <a href="#tt-bulk-delete">Bulk Delete</a>
+
+        <div class="group-label">TikTok — Actions</div>
+        <a href="#tt-follow">Follow</a>
+        <a href="#tt-like-posts">Like Posts</a>
+        <a href="#tt-view-profile">View Profile</a>
+        <a href="#tt-comment">Comment</a>
+        <a href="#tt-like-story">Like Story</a>
+        <a href="#tt-collection">Run Collection</a>
+
+        <div class="group-label">TikTok — Tasks</div>
+        <a href="#tt-tasks-list">All Tasks</a>
+        <a href="#tt-task-status">Task Status</a>
+        <a href="#tt-task-stop">Stop Task</a>
+    </aside>
+
+    <!-- ── Main content ──────────────────────────────────────────────────── -->
+    <div class="flex-1 min-w-0">
+
+        <!-- Page header + search -->
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">API Documentation</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    All endpoints are prefixed with <span class="icode">/api</span>
+                </p>
+            </div>
+            <input id="api-search" type="text" placeholder="Search endpoints…"
+                   class="input w-56 text-sm" oninput="searchDocs(this.value)">
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             OVERVIEW
+        ══════════════════════════════════════════════════════════════ -->
+        <div id="overview" class="card p-6 mb-6">
+            <h2 class="section-title">Base URL &amp; Response Format</h2>
+
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                The server runs on <span class="icode">http://localhost:5000</span> by default.
+                All routes below are relative to <span class="icode">/api</span>.
+            </p>
+
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Standard success response:</p>
+            <pre class="code">{
+  "success": true,
+  "data": { ... }        // varies per endpoint
+}</pre>
+
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Standard error response:</p>
+            <pre class="code">{
+  "error": "human-readable error message"
+}</pre>
+
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Task-queued response (most action endpoints):</p>
+            <pre class="code">{
+  "success": true,
+  "message": "Task description",
+  "task_id": "uuid-v4"
+}</pre>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             STATUS CODES
+        ══════════════════════════════════════════════════════════════ -->
+        <div id="status-codes" class="card p-6 mb-6">
+            <h2 class="section-title">HTTP Status Codes</h2>
+            <table class="field-table">
+                <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+                <tbody>
+                    <tr><td><code>200</code></td><td>OK — request succeeded</td></tr>
+                    <tr><td><code>201</code></td><td>Created — resource successfully created</td></tr>
+                    <tr><td><code>400</code></td><td>Bad Request — missing or invalid fields</td></tr>
+                    <tr><td><code>404</code></td><td>Not Found — device / account / task does not exist</td></tr>
+                    <tr><td><code>409</code></td><td>Conflict — resource already exists</td></tr>
+                    <tr><td><code>500</code></td><td>Server Error — unexpected exception</td></tr>
+                    <tr><td><code>503</code></td><td>Service Unavailable — task manager not initialised</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             DEVICE ENDPOINTS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title" style="scroll-margin-top:5rem">Devices</h2>
+
+            <!-- List -->
+            <div id="dev-list" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/devices/list</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">List Devices</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Returns all registered devices. Filter by platform to get devices for a specific use case.</p>
+                <p class="text-xs font-semibold uppercase text-gray-400 mt-3 mb-1">Query Parameters</p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>platform</code></td><td>string</td><td><span class="opt">optional</span></td><td><code>instagram</code> | <code>tiktok</code> | <code>both</code> — also returns devices set to <code>both</code></td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// GET /api/devices/list?platform=instagram
+{
+  "success": true,
+  "devices": [
+    {
+      "id": 1,
+      "device_id": "emulator-5554",
+      "device_name": "Phone 1",
+      "status": "connected",
+      "platform": "instagram",
+      "assigned_to": null,
+      "last_seen": "2026-04-07T10:00:00"
+    }
+  ]
+}</pre>
+            </div>
+
+            <!-- Create -->
+            <div id="dev-create" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/devices/create</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Create Device</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Register a new Android device in the system.</p>
+                <p class="text-xs font-semibold uppercase text-gray-400 mt-3 mb-1">Request Body</p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td>ADB device serial (e.g. <code>emulator-5554</code>)</td></tr>
+                        <tr><td><code>name</code></td><td>string</td><td><span class="req">required</span></td><td>Friendly name shown in the UI</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// POST /api/devices/create
+{ "device_id": "emulator-5554", "name": "Phone 1" }
+
+// Response 200
+{ "success": true, "message": "Device added successfully", "device": { ... } }</pre>
+            </div>
+
+            <!-- Update -->
+            <div id="dev-update" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-PUT">PUT</span>
+                    <span class="icode">/devices/{device_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Update Device</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Update device name, status, or assignment. Unassigning also disassociates Instagram accounts.</p>
+                <p class="text-xs font-semibold uppercase text-gray-400 mt-3 mb-1">Request Body (all optional)</p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>name</code></td><td>string</td><td>New display name</td></tr>
+                        <tr><td><code>status</code></td><td>string</td><td><code>connected</code> | <code>disconnected</code> | <code>error</code></td></tr>
+                        <tr><td><code>assigned_to</code></td><td>string | null</td><td>User ID to assign to; <code>null</code> to unassign</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Delete -->
+            <div id="dev-delete" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-DELETE">DELETE</span>
+                    <span class="icode">/devices/{device_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Delete Device</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Permanently deletes the device and all associated Instagram accounts.</p>
+                <pre class="code">// Response 200
+{ "success": true, "message": "Device emulator-5554 and its 2 associated accounts deleted" }</pre>
+            </div>
+
+            <!-- Assign -->
+            <div id="dev-assign" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/devices/assign</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Assign Device to User</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Picks N free devices and assigns them to a user ID.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>user_id</code></td><td>string</td><td><span class="req">required</span></td><td>Identifier for the user</td></tr>
+                        <tr><td><code>count</code></td><td>integer</td><td><span class="opt">optional</span></td><td>Number of devices to assign (default: 1)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Unassign -->
+            <div id="dev-unassign" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/devices/{device_id}/unassign</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Unassign Device</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Removes the user assignment and sets all linked Instagram accounts to logged-out.</p>
+            </div>
+
+            <!-- User devices -->
+            <div id="dev-user" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/devices/user/{user_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Get User's Devices</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">All devices currently assigned to a given user, with their Instagram account count.</p>
+            </div>
+
+            <!-- Free devices -->
+            <div id="dev-free" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/devices/free</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Free Devices</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">All devices with no user assignment, plus a summary (total, connected, needs_cleanup).</p>
+            </div>
+
+            <!-- Bulk operations -->
+            <div id="dev-bulk" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/devices/operations/bulk</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Bulk ADB Operations</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Run an ADB operation on one or more devices simultaneously.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_ids</code></td><td>string[]</td><td><span class="req">required</span></td><td>List of device serials</td></tr>
+                        <tr><td><code>operation</code></td><td>string</td><td><span class="req">required</span></td><td>See operations table below</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-xs font-semibold uppercase text-gray-400 mt-3 mb-1">Available Operations</p>
+                <table class="field-table">
+                    <thead><tr><th>Value</th><th>Action</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>clear_instagram</code></td><td><code>pm clear com.instagram.android</code></td></tr>
+                        <tr><td><code>clear_tiktok</code></td><td><code>pm clear com.zhiliaoapp.musically</code></td></tr>
+                        <tr><td><code>reboot</code></td><td>Reboot the device</td></tr>
+                        <tr><td><code>clean_apps</code></td><td>Disable common bloatware</td></tr>
+                        <tr><td><code>install_uiautomator</code></td><td>Push uiautomator2 APKs</td></tr>
+                        <tr><td><code>start_gnirehtet</code></td><td>Start reverse-tethering via gnirehtet</td></tr>
+                        <tr><td><code>stop_gnirehtet</code></td><td>Stop gnirehtet</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// POST /api/devices/operations/bulk
+{
+  "device_ids": ["emulator-5554", "emulator-5556"],
+  "operation": "reboot"
+}
+// Response
+{ "success": true, "results": [
+    { "device_id": "emulator-5554", "success": true, "message": "Device reboot initiated" },
+    { "device_id": "emulator-5556", "success": true, "message": "Device reboot initiated" }
+] }</pre>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             INSTAGRAM — ACCOUNTS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">Instagram — Account Management</h2>
+
+            <!-- Add -->
+            <div id="ig-add" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/accounts</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Add Instagram Account</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Register a new Instagram account. <code class="icode">device_id</code> is optional — the account can be assigned to a device later.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td>Instagram username (without @)</td></tr>
+                        <tr><td><code>password</code></td><td>string</td><td><span class="req">required</span></td><td>Instagram password</td></tr>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="opt">optional</span></td><td>ADB device serial to assign immediately</td></tr>
+                        <tr><td><code>email</code></td><td>string</td><td><span class="opt">optional</span></td><td>Recovery email address</td></tr>
+                        <tr><td><code>email_password</code></td><td>string</td><td><span class="opt">optional</span></td><td>Recovery email password</td></tr>
+                        <tr><td><code>imap_server</code></td><td>string</td><td><span class="opt">optional</span></td><td>IMAP hostname (e.g. <code>imap.gmail.com</code>)</td></tr>
+                        <tr><td><code>imap_port</code></td><td>integer</td><td><span class="opt">optional</span></td><td>IMAP port (default: <code>993</code>)</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// POST /api/instagram/accounts
+{
+  "username": "myaccount",
+  "password": "secret",
+  "device_id": "emulator-5554",
+  "email": "myaccount@gmail.com",
+  "email_password": "emailsecret",
+  "imap_server": "imap.gmail.com",
+  "imap_port": 993
+}
+// Response 201
+{ "success": true, "message": "Instagram account added successfully", "account": { ... } }</pre>
+            </div>
+
+            <!-- Bulk add -->
+            <div id="ig-bulk-add" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/accounts/bulk</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Bulk Add Accounts</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Add multiple accounts in one request. Each object supports the same fields as the single-add endpoint.</p>
+                <pre class="code">// POST /api/instagram/accounts/bulk
+{
+  "accounts": [
+    { "username": "acc1", "password": "pass1", "device_id": "emulator-5554",
+      "imap_server": "imap.gmail.com", "imap_port": 993 },
+    { "username": "acc2", "password": "pass2" }
+  ]
+}
+// Response 200
+{
+  "success": true,
+  "added": 2,
+  "failed": [],
+  "message": "Added 2, failed 0"
+}</pre>
+            </div>
+
+            <!-- List -->
+            <div id="ig-list" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/instagram/accounts/list</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">List Accounts</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Query Param</th><th>Type</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td>Filter by device serial</td></tr>
+                        <tr><td><code>login_status</code></td><td>boolean string</td><td><code>true</code> | <code>false</code></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td>Partial match (case-insensitive)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Delete -->
+            <div id="ig-delete" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-DELETE">DELETE</span>
+                    <span class="icode">/instagram/accounts/{username}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Delete Account</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Permanently remove a single account and all its stats.</p>
+            </div>
+
+            <!-- Bulk delete -->
+            <div id="ig-bulk-delete" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/accounts/bulk-delete</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Bulk Delete Accounts</p>
+                <pre class="code">{ "usernames": ["acc1", "acc2"] }</pre>
+            </div>
+
+            <!-- Login -->
+            <div id="ig-login" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/login</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Login to Instagram</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Queues a login task on the specified device. Creates the account record if it doesn't exist yet.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td>Target device serial</td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td>Instagram username</td></tr>
+                        <tr><td><code>password</code></td><td>string</td><td><span class="req">required</span></td><td>Instagram password</td></tr>
+                        <tr><td><code>email</code></td><td>string</td><td><span class="opt">optional</span></td><td>Recovery email</td></tr>
+                        <tr><td><code>email_password</code></td><td>string</td><td><span class="opt">optional</span></td><td>Recovery email password</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Logout -->
+            <div id="ig-logout" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/logout</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Logout</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount" }</pre>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             INSTAGRAM — ACTIONS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">Instagram — Actions</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                All action endpoints queue a background task and return a <span class="icode">task_id</span> immediately.
+                Poll <span class="icode">/instagram/tasks/{task_id}</span> to track progress.
+                Common fields for every action: <span class="icode">device_id</span> <span class="req">required</span>,
+                <span class="icode">username</span> <span class="req">required</span>.
+            </p>
+
+            <!-- Like post -->
+            <div id="ig-like-post" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/like-post</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Like Post</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Opens the target's profile and likes their latest post.</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Comment post -->
+            <div id="ig-comment-post" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/comment-post</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Comment on Post</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>target_username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>comment</code></td><td>string</td><td><span class="req">required</span></td><td>Comment text to post</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Follow -->
+            <div id="ig-follow" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/follow</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Follow User</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Unfollow -->
+            <div id="ig-unfollow" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/unfollow</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Unfollow User</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- View story -->
+            <div id="ig-view-story" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/view-story</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">View Story</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Like story -->
+            <div id="ig-like-story" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/like-story</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Like Story</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Comment story -->
+            <div id="ig-comment-story" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/comment-story</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Comment on Story</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>target_username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>comment</code></td><td>string</td><td><span class="opt">optional</span></td><td>Default: <code>👏</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Send DM -->
+            <div id="ig-send-dm" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/send-dm</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Send Direct Message</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>target_username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>message</code></td><td>string</td><td><span class="req">required</span></td><td>Message text to send</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Post reel -->
+            <div id="ig-post-reel" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/post-reel</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Post Reel</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><code>video_path</code> can be a local file path or a remote HTTP(S) URL — the server will download it automatically.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>video_path</code></td><td>string</td><td><span class="req">required</span></td><td>Local path or HTTP URL to video</td></tr>
+                        <tr><td><code>caption</code></td><td>string</td><td><span class="req">required</span></td><td>Reel caption (supports emojis &amp; hashtags)</td></tr>
+                        <tr><td><code>music_query</code></td><td>string</td><td><span class="opt">optional</span></td><td>Search term for background music</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Post photo -->
+            <div id="ig-post-photo" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/post-photo</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Post Photo</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>photo_path</code></td><td>string</td><td><span class="req">required</span></td><td>Local path or HTTP URL to image</td></tr>
+                        <tr><td><code>caption</code></td><td>string</td><td><span class="req">required</span></td><td>Post caption</td></tr>
+                        <tr><td><code>music_query</code></td><td>string</td><td><span class="opt">optional</span></td><td>Background music search term</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Upload media -->
+            <div id="ig-upload-media" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/actions/upload-media</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Upload Media File</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Multipart form upload — stores the file on the server and returns its path for use in <code class="icode">post-reel</code> / <code class="icode">post-photo</code>.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Form Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>file</code></td><td>file</td><td><span class="req">required</span></td><td>The media file</td></tr>
+                        <tr><td><code>type</code></td><td>string</td><td><span class="req">required</span></td><td><code>photo</code> | <code>reel</code></td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// Response 200
+{ "success": true, "message": "Photo uploaded successfully", "file_path": "/path/to/uploads/photos/..." }</pre>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             INSTAGRAM — TASKS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">Instagram — Tasks</h2>
+
+            <div id="ig-tasks-list" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/instagram/tasks</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">All Tasks</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Returns all tasks (in memory) sorted newest-first.</p>
+                <pre class="code">{
+  "success": true,
+  "tasks": [
+    {
+      "task_id": "abc-123",
+      "task_type": "like_post",
+      "status": "completed",        // pending | running | completed | failed
+      "device_id": "emulator-5554",
+      "username": "myaccount",
+      "target_username": "targetuser",
+      "action": "Like post from targetuser as myaccount",
+      "created_at": "2026-04-07T10:00:00",
+      "completed_at": "2026-04-07T10:00:05",
+      "duration": "0:00:05",
+      "result": "Post liked successfully",
+      "error": null
+    }
+  ]
+}</pre>
+            </div>
+
+            <div id="ig-task-status" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/instagram/tasks/{task_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Task Status</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Same schema as above but for a single task. Returns <code class="icode">404</code> if not found.</p>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             TIKTOK — ACCOUNTS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">TikTok — Account Management</h2>
+
+            <!-- Add -->
+            <div id="tt-add" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/accounts</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Add TikTok Account</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td>TikTok username</td></tr>
+                        <tr><td><code>password</code></td><td>string</td><td><span class="req">required</span></td><td>TikTok password</td></tr>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td>Device to operate from</td></tr>
+                        <tr><td><code>email</code></td><td>string</td><td><span class="opt">optional</span></td><td>Recovery email</td></tr>
+                        <tr><td><code>email_password</code></td><td>string</td><td><span class="opt">optional</span></td><td>Recovery email password</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- List -->
+            <div id="tt-list" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/tiktok/accounts/list</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">List TikTok Accounts</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Query Param</th><th>Type</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td>Filter by device</td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td>Partial match</td></tr>
+                        <tr><td><code>login_status</code></td><td>boolean string</td><td><code>true</code> | <code>false</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Update config -->
+            <div id="tt-update" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-PUT">PUT</span>
+                    <span class="icode">/tiktok/accounts/{username}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Update Collection Config</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">All fields are optional — only send the ones you want to change.</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>targets</code></td><td>string</td><td>Comma/newline-separated competitor usernames to scrape followers from</td></tr>
+                        <tr><td><code>start_time</code></td><td>string</td><td>Daily start time <code>HH:MM</code></td></tr>
+                        <tr><td><code>stop_time</code></td><td>string</td><td>Daily stop time <code>HH:MM</code></td></tr>
+                        <tr><td><code>daily_follow_limit</code></td><td>integer</td><td>Max follows per day</td></tr>
+                        <tr><td><code>daily_like_limit</code></td><td>integer</td><td>Max likes per day</td></tr>
+                        <tr><td><code>daily_comment_limit</code></td><td>integer</td><td>Max comments per day</td></tr>
+                        <tr><td><code>daily_visit_limit</code></td><td>integer</td><td>Max profile visits per day</td></tr>
+                        <tr><td><code>daily_story_like_limit</code></td><td>integer</td><td>Max story likes per day</td></tr>
+                        <tr><td><code>unfollow_limit</code></td><td>integer</td><td>Max unfollows per day</td></tr>
+                        <tr><td><code>min_followers</code></td><td>integer</td><td>Minimum follower count filter</td></tr>
+                        <tr><td><code>max_followers</code></td><td>integer</td><td>Maximum follower count filter</td></tr>
+                        <tr><td><code>min_following</code></td><td>integer</td><td>Minimum following count filter</td></tr>
+                        <tr><td><code>max_following</code></td><td>integer</td><td>Maximum following count filter</td></tr>
+                        <tr><td><code>min_posts</code></td><td>integer</td><td>Minimum post count filter</td></tr>
+                        <tr><td><code>max_posts</code></td><td>integer</td><td>Maximum post count filter</td></tr>
+                        <tr><td><code>language_code</code></td><td>string</td><td>Comma-separated language codes e.g. <code>en,tr</code></td></tr>
+                        <tr><td><code>gender</code></td><td>string</td><td><code>male</code> | <code>female</code> | <code>both</code></td></tr>
+                        <tr><td><code>comment_texts</code></td><td>string</td><td>Newline-separated comment pool</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Delete -->
+            <div id="tt-delete" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-DELETE">DELETE</span>
+                    <span class="icode">/tiktok/accounts/{username}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Delete TikTok Account</p>
+            </div>
+
+            <!-- Bulk delete -->
+            <div id="tt-bulk-delete" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/accounts/bulk-delete</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Bulk Delete TikTok Accounts</p>
+                <pre class="code">{ "usernames": ["acc1", "acc2"] }</pre>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             TIKTOK — ACTIONS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">TikTok — Actions</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                All action endpoints queue a background task and return a <span class="icode">task_id</span>.
+                All require <span class="icode">device_id</span>, <span class="icode">username</span>, and <span class="icode">target_username</span> unless noted.
+            </p>
+
+            <!-- Follow -->
+            <div id="tt-follow" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/actions/follow</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Follow User</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Navigates to the target's profile and taps Follow. Also likes up to 3 posts.</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Like posts -->
+            <div id="tt-like-posts" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/actions/like-posts</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Like Posts</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>target_username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>count</code></td><td>integer</td><td><span class="opt">optional</span></td><td>Number of posts to like (default: <code>3</code>)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- View profile -->
+            <div id="tt-view-profile" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/actions/view-profile</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">View Profile</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Visits the target's profile, likes posts, and records a profile_view stat. Restarts TikTok afterwards.</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Comment -->
+            <div id="tt-comment" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/actions/comment</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Comment on Post</p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>target_username</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>comment</code></td><td>string</td><td><span class="req">required</span></td><td>Comment text</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Like story -->
+            <div id="tt-like-story" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/actions/like-story</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Like Story</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Finds the target's story ring and taps the Like button.</p>
+                <pre class="code">{ "device_id": "emulator-5554", "username": "myaccount", "target_username": "targetuser" }</pre>
+            </div>
+
+            <!-- Run collection -->
+            <div id="tt-collection" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/actions/run-collection</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Run Mass Collection</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Starts the full collection loop: fetches followers of <code class="icode">targets</code> via the
+                    evelode.com follower API (cursor-paginated), filters by quality criteria, then performs a
+                    randomised mix of follow / like / comment / visit / story-like actions up to the daily limits.
+                    Uses smart delay (time-window ÷ total actions × weight ± 20%) between each action.
+                    The loop runs until all daily limits are hit, <code class="icode">stop_time</code> is reached,
+                    or a stop signal is sent via <code class="icode">POST /tiktok/tasks/{task_id}/stop</code>.
+                </p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Config is loaded from the account's saved settings. Any field sent in the request body overrides the saved value for this run.
+                </p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td></td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td>Must exist in DB with <code>targets</code> configured</td></tr>
+                        <tr><td><code>targets</code></td><td>string</td><td><span class="opt">override</span></td><td>Comma/newline competitor usernames</td></tr>
+                        <tr><td><code>start_time</code></td><td>string</td><td><span class="opt">override</span></td><td><code>HH:MM</code></td></tr>
+                        <tr><td><code>stop_time</code></td><td>string</td><td><span class="opt">override</span></td><td><code>HH:MM</code></td></tr>
+                        <tr><td><code>daily_follow_limit</code></td><td>integer</td><td><span class="opt">override</span></td><td></td></tr>
+                        <tr><td><code>daily_like_limit</code></td><td>integer</td><td><span class="opt">override</span></td><td></td></tr>
+                        <tr><td><code>daily_comment_limit</code></td><td>integer</td><td><span class="opt">override</span></td><td></td></tr>
+                        <tr><td><code>daily_visit_limit</code></td><td>integer</td><td><span class="opt">override</span></td><td></td></tr>
+                        <tr><td><code>daily_story_like_limit</code></td><td>integer</td><td><span class="opt">override</span></td><td></td></tr>
+                        <tr><td><code>unfollow_limit</code></td><td>integer</td><td><span class="opt">override</span></td><td></td></tr>
+                        <tr><td><code>min_followers</code> / <code>max_followers</code></td><td>integer</td><td><span class="opt">override</span></td><td>Follower count quality filter</td></tr>
+                        <tr><td><code>min_following</code> / <code>max_following</code></td><td>integer</td><td><span class="opt">override</span></td><td>Following count quality filter</td></tr>
+                        <tr><td><code>min_posts</code> / <code>max_posts</code></td><td>integer</td><td><span class="opt">override</span></td><td>Post count quality filter</td></tr>
+                        <tr><td><code>language_code</code></td><td>string</td><td><span class="opt">override</span></td><td>e.g. <code>en,tr</code></td></tr>
+                        <tr><td><code>gender</code></td><td>string</td><td><span class="opt">override</span></td><td><code>male</code> | <code>female</code> | <code>both</code></td></tr>
+                        <tr><td><code>comment_texts</code></td><td>string</td><td><span class="opt">override</span></td><td>Newline-separated comment pool</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// POST /api/tiktok/actions/run-collection
+{
+  "device_id": "emulator-5554",
+  "username": "myaccount",
+  "targets": "competitor1,competitor2",
+  "daily_follow_limit": 100,
+  "gender": "female",
+  "language_code": "en"
+}
+// Response 200
+{
+  "success": true,
+  "message": "Collection started for myaccount",
+  "task_id": "uuid-v4",
+  "config": { ... }
+}</pre>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             TIKTOK — TASKS
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">TikTok — Tasks</h2>
+
+            <div id="tt-tasks-list" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/tiktok/tasks</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">All TikTok Tasks</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">All in-memory TikTok tasks sorted newest-first. Same schema as Instagram tasks.</p>
+            </div>
+
+            <div id="tt-task-status" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/tiktok/tasks/{task_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Task Status</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Returns <code class="icode">404</code> if not found.</p>
+            </div>
+
+            <div id="tt-task-stop" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/tasks/{task_id}/stop</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Stop Collection Task</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Sends a stop signal to a running <code class="icode">run_collection</code> task. The loop exits after the current action finishes. Only works for tasks with status <code class="icode">running</code>.</p>
+                <pre class="code">// Response 200
+{ "success": true, "message": "Stop signal sent to task abc-123" }
+
+// Response 404 (not found or not running)
+{ "error": "Task not found or not running" }</pre>
+            </div>
+        </div>
+
+    </div><!-- /main -->
+</div><!-- /flex -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Sidebar active highlight on scroll ──────────────────────────────────────
+const sidebarLinks = document.querySelectorAll('.doc-sidebar a');
+const sections = Array.from(document.querySelectorAll('[id]'));
+
+function updateActive() {
+    let current = '';
+    sections.forEach(s => {
+        if (window.scrollY + 80 >= s.offsetTop) current = s.id;
+    });
+    sidebarLinks.forEach(link => {
+        const href = link.getAttribute('href').slice(1);
+        link.classList.toggle('active', href === current);
+    });
+}
+window.addEventListener('scroll', updateActive, { passive: true });
+updateActive();
+
+// ── Search / highlight ───────────────────────────────────────────────────────
+function searchDocs(query) {
+    query = query.trim().toLowerCase();
+    const cards = document.querySelectorAll('.ep');
+    cards.forEach(ep => {
+        if (!query) {
+            ep.style.display = '';
+            // remove highlights
+            ep.querySelectorAll('mark').forEach(m => {
+                m.replaceWith(document.createTextNode(m.textContent));
+            });
+            return;
+        }
+        const text = ep.textContent.toLowerCase();
+        ep.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+# Phone Farm — Instagram & TikTok Automation Platform
+
+A Flask-based phone farm management system that controls Android devices via ADB to automate Instagram and TikTok actions at scale.
+
+## Stack
+
+- **Backend**: Python 3.12, Flask 3.0.3
+- **Database**: SQLite via Flask-SQLAlchemy 3.1.1 + Flask-Migrate / Alembic
+- **Device automation**: uiautomator2, adbutils (ADB over USB/TCP)
+- **Image/OCR**: Pillow, pytesseract, OpenCV, NumPy
+- **Task scheduling**: APScheduler 3.10.4
+- **Frontend**: Jinja2 templates, Tailwind CSS v3 (Play CDN), Font Awesome, vanilla JS
+- **Entry point**: `run.py` → `app.run(debug=True)`, started via `start.bat`
+
+## Project Layout
+
+```
+Instagram/
+├── run.py                          # Entry point
+├── config.py                       # Flask config (SECRET_KEY, DB URI, rate limits, daily action caps)
+├── start.bat                       # Windows launcher
+├── requirements.txt
+├── instagram_farm.db               # SQLite database (auto-created)
+├── assets/                         # ADB/device assets managed by DeviceManager
+├── uploads/                        # Media files staged for device push
+├── app/
+│   ├── __init__.py                 # create_app() — registers blueprints, DB, migrations, background tasks
+│   ├── extensions.py               # db, migrate singletons
+│   ├── template_filters.py         # Jinja2 custom filters
+│   ├── models/
+│   │   ├── device.py               # Device model
+│   │   ├── instagram_account.py    # InstagramAccount model
+│   │   ├── tiktok_account.py       # TikTokAccount model
+│   │   ├── direct_message.py
+│   │   └── post_comment.py
+│   ├── api/
+│   │   ├── __init__.py             # Blueprint + all url_rule registrations
+│   │   ├── device_routes.py        # /api/devices/*
+│   │   ├── instagram_routes.py     # /api/instagram/*
+│   │   └── tiktok_routes.py        # /api/tiktok/*
+│   ├── admin/
+│   │   ├── __init__.py             # Blueprint (template_folder='templates')
+│   │   ├── routes.py               # Admin UI routes — dashboard, devices, accounts, tasks, api-docs
+│   │   └── templates/admin/
+│   │       ├── base.html           # Tailwind + dark mode + nav + toast system
+│   │       ├── dashboard.html
+│   │       ├── devices.html
+│   │       ├── instagram_accounts.html
+│   │       ├── tiktok_accounts.html
+│   │       ├── tasks.html
+│   │       ├── api_docs.html
+│   │       └── error.html
+│   └── utils/
+│       ├── adb.py                  # ADBManager — execute_operation() dispatcher
+│       ├── device_manager.py       # DeviceManager — ADB discovery & status
+│       ├── auto_device_manager.py  # Background ADB polling
+│       ├── background_tasks.py     # APScheduler jobs (daily stat reset, etc.)
+│       ├── instagram_automation.py # Low-level IG UI automation via uiautomator2
+│       ├── instagram_task_manager.py # IG task queue
+│       ├── tiktok_automation.py    # Low-level TT UI automation via uiautomator2
+│       ├── tiktok_task_manager.py  # TT task queue
+│       └── task_manager.py        # Shared task base
+└── migrations/
+    └── versions/
+        ├── add_tiktok_support.py
+        └── add_imap_to_instagram_accounts.py
+```
+
+## Blueprints & URL Prefixes
+
+| Blueprint | Prefix   | Purpose                        |
+|-----------|----------|--------------------------------|
+| api       | /api     | REST API (JSON)                |
+| admin     | /admin   | HTML admin panel               |
+
+## Models
+
+### Device (`devices` table)
+- `device_id` (PK string), `device_name`, `status` (connected/disconnected/error)
+- `platform` (instagram/tiktok/both), `assigned_to`, `is_initialized`
+- `last_seen`, `error_message`
+
+### InstagramAccount (`instagram_accounts` table)
+- `username`, `password`, `device_id` (FK → devices, SET NULL)
+- `login_status` (bool), `email`, `email_password`, `imap_server`, `imap_port` (default 993)
+- `last_login`, `last_logout`, `error_message`
+- Counters: `total_likes`, `total_comments`, `total_follows`, `total_unfollows`, `total_stories_viewed`, `total_story_likes`, `total_dms`
+- Daily counters: same set prefixed `daily_*` + `last_daily_reset`
+- Methods: `update_stats(action_type)`, `get_daily_stats()`, `get_total_stats()`, `to_dict()`
+
+### TikTokAccount (`tiktok_accounts` table)
+- `username`, `password`, `device_id` (FK)
+- `target_usernames` (JSON list), `follow_limit`, `like_limit`
+- Daily/total counters: `daily_follows`, `daily_likes`, `daily_comments`, `daily_story_likes`, `daily_profile_views`, and `total_*` equivalents
+- Methods: `to_dict()`
+
+## REST API — All Endpoints
+
+### Devices (`/api/devices`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /devices/list | List all devices |
+| POST | /devices/create | Create device |
+| PUT | /devices/{device_id} | Update device |
+| DELETE | /devices/{device_id} | Delete device |
+| POST | /devices/assign | Assign device to account |
+| POST | /devices/{device_id}/unassign | Unassign device |
+| POST | /devices/operations/bulk | Bulk ADB operations (reboot, clear_instagram, clear_tiktok, internet_check) |
+| GET | /devices/user/{user_id} | Devices for user |
+| GET | /devices/free | Unassigned devices |
+
+### Instagram Accounts (`/api/instagram`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /instagram/accounts/list | List all IG accounts |
+| POST | /instagram/accounts | Add single account (username, password, device_id?, email?, email_password?, imap_server?, imap_port?) |
+| POST | /instagram/accounts/bulk | Bulk import — array or newline text `user:pass:email:email_pw:imap_server:imap_port` |
+| DELETE | /instagram/accounts/{username} | Delete account |
+| POST | /instagram/accounts/bulk-delete | Delete multiple accounts |
+| POST | /instagram/login | Login account on device |
+| POST | /instagram/logout | Logout account |
+| GET | /instagram/tasks | List all IG tasks |
+| GET | /instagram/tasks/{task_id} | Get task status |
+
+### Instagram Actions (`/api/instagram/actions`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /instagram/actions/like-post | Like a post |
+| POST | /instagram/actions/comment-post | Comment on post |
+| POST | /instagram/actions/follow | Follow user |
+| POST | /instagram/actions/unfollow | Unfollow user |
+| POST | /instagram/actions/view-story | View story |
+| POST | /instagram/actions/like-story | Like story |
+| POST | /instagram/actions/comment-story | Comment on story |
+| POST | /instagram/actions/send-dm | Send direct message |
+| POST | /instagram/actions/post-reel | Post reel |
+| POST | /instagram/actions/post-photo | Post photo |
+| POST | /instagram/actions/upload-media | Upload media to device |
+
+### TikTok Accounts (`/api/tiktok`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /tiktok/accounts/list | List all TT accounts |
+| POST | /tiktok/accounts | Add account |
+| PUT | /tiktok/accounts/{username} | Update account |
+| DELETE | /tiktok/accounts/{username} | Delete account |
+| POST | /tiktok/accounts/bulk-delete | Delete multiple accounts |
+| GET | /tiktok/tasks | List all TT tasks |
+| GET | /tiktok/tasks/{task_id} | Get task status |
+| POST | /tiktok/tasks/{task_id}/stop | Stop running task |
+
+### TikTok Actions (`/api/tiktok/actions`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /tiktok/actions/follow | Follow user |
+| POST | /tiktok/actions/like-posts | Like posts |
+| POST | /tiktok/actions/view-profile | View profile |
+| POST | /tiktok/actions/comment | Comment |
+| POST | /tiktok/actions/like-story | Like story |
+| POST | /tiktok/actions/run-collection | Mass collection — fetch followers of targets, filter, act |
+
+## Admin UI Pages
+
+| URL | Template | Description |
+|-----|----------|-------------|
+| /admin/ | dashboard.html | Stats overview — devices, IG logged-in/errors, TT count, daily actions breakdown |
+| /admin/devices | devices.html | Device table with bulk ADB actions (reboot, clear IG, clear TT, internet check) |
+| /admin/instagram/accounts | instagram_accounts.html | IG account table, add single/bulk modal (includes IMAP fields) |
+| /admin/tiktok/accounts | tiktok_accounts.html | TT account table, add single/bulk modal |
+| /admin/tasks | tasks.html | Live AJAX task monitor — IG + TT tasks, auto-refresh every 10s |
+| /admin/api-docs | api_docs.html | Full REST API documentation with search |
+
+## Dark Mode
+
+Tailwind `darkMode: 'class'` — toggled by adding/removing `dark` class on `<html>`. Preference stored in `localStorage`. OS preference detected on first visit. Toggle button in top nav.
+
+## Key Config Values (config.py)
+
+```python
+MAX_DAILY_ACTIONS = {
+    'likes': 50, 'comments': 20, 'follows': 30, 'unfollows': 30, 'stories': 100
+}
+INSTAGRAM_LOGIN_TIMEOUT = 30   # seconds
+INSTAGRAM_ACTION_DELAY  = 2    # seconds between actions
+API_RATE_LIMIT = '500/hour'
+```
+
+## Database Migrations
+
+Run via Flask-Migrate:
+```bash
+flask db upgrade
+```
+Migration files in `migrations/versions/`. SQLite-safe — all schema changes use `batch_alter_table`.
+
+## Running
+
+```bash
+start.bat
+# or
+venv\Scripts\python.exe run.py
+```
+
+App starts on `http://localhost:5000`. Admin panel at `http://localhost:5000/admin/`.

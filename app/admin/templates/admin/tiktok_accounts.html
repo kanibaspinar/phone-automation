@@ -1,0 +1,454 @@
+{% extends "admin/base.html" %}
+
+{% block title %}TikTok Accounts{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">TikTok Accounts</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage accounts and collection configuration</p>
+    </div>
+    <button onclick="openModal('tt-add-modal')" class="btn-primary">
+        <i class="fas fa-plus text-xs"></i> Add Account
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Total</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ tiktok_accounts|length }}</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Today Follows</p>
+        <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mt-1">
+            {% set tf = namespace(v=0) %}{% for a in tiktok_accounts %}{% set tf.v = tf.v + a.daily_follows %}{% endfor %}{{ tf.v }}
+        </p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Today Likes</p>
+        <p class="text-2xl font-bold text-pink-600 dark:text-pink-400 mt-1">
+            {% set tl = namespace(v=0) %}{% for a in tiktok_accounts %}{% set tl.v = tl.v + a.daily_likes %}{% endfor %}{{ tl.v }}
+        </p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Today Comments</p>
+        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+            {% set tc = namespace(v=0) %}{% for a in tiktok_accounts %}{% set tc.v = tc.v + a.daily_comments %}{% endfor %}{{ tc.v }}
+        </p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card p-4 mb-4 flex flex-wrap gap-3">
+    <input id="ttSearch" type="text" placeholder="Search by username…" class="input w-56">
+    <select id="ttDeviceFilter" class="input w-44">
+        <option value="">All Devices</option>
+        {% for device in devices %}
+        <option value="{{ device.device_id }}">{{ device.device_name }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="bulkDeleteTTAccounts()" class="btn-danger ml-auto">
+        <i class="fas fa-trash text-xs"></i> Delete Selected
+    </button>
+</div>
+
+<!-- Accounts Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b border-gray-100 dark:border-gray-700">
+                    <th class="th w-8">
+                        <input type="checkbox" onclick="toggleSelectAll(this)"
+                            class="rounded border-gray-300 dark:border-gray-600 text-cyan-500 dark:bg-gray-700">
+                    </th>
+                    <th class="th">Account</th>
+                    <th class="th">Device</th>
+                    <th class="th">Targets & Filters</th>
+                    <th class="th text-center">Daily Limits</th>
+                    <th class="th text-center">Today</th>
+                    <th class="th text-center">Total</th>
+                    <th class="th text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50" id="ttAccountsBody">
+                {% for account in tiktok_accounts %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors tt-row"
+                    data-username="{{ account.username }}"
+                    data-device="{{ account.device_id or '' }}">
+
+                    <td class="td">
+                        <input type="checkbox" name="selected_accounts" value="{{ account.username }}"
+                            class="rounded border-gray-300 dark:border-gray-600 text-cyan-500 dark:bg-gray-700">
+                    </td>
+
+                    <td class="td">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                                {{ account.username[0]|upper }}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-gray-100">{{ account.username }}</div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500">{{ account.email or '—' }}</div>
+                                {% if account.start_time and account.stop_time %}
+                                <div class="text-xs text-gray-400 dark:text-gray-500">
+                                    <i class="fas fa-clock text-xs mr-1"></i>{{ account.start_time }} – {{ account.stop_time }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="td">
+                        <div class="text-xs font-mono text-gray-700 dark:text-gray-300">{{ account.device_id or '—' }}</div>
+                    </td>
+
+                    <td class="td max-w-xs">
+                        {% if account.targets %}
+                        <div class="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[180px]" title="{{ account.targets }}">
+                            {{ account.targets }}
+                        </div>
+                        {% else %}
+                        <span class="text-xs text-gray-400 dark:text-gray-500">No targets</span>
+                        {% endif %}
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% if account.gender %}
+                            <span class="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded">{{ account.gender }}</span>
+                            {% endif %}
+                            {% if account.language_code %}
+                            <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded">{{ account.language_code }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td class="td">
+                        <div class="grid grid-cols-3 gap-x-2 gap-y-0.5 text-center min-w-max mx-auto">
+                            <div><p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ account.daily_follow_limit }}</p><p class="text-xs text-gray-400">Follow</p></div>
+                            <div><p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ account.daily_like_limit }}</p><p class="text-xs text-gray-400">Like</p></div>
+                            <div><p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ account.daily_comment_limit }}</p><p class="text-xs text-gray-400">Cmt</p></div>
+                        </div>
+                    </td>
+
+                    <td class="td">
+                        <div class="grid grid-cols-3 gap-x-2 gap-y-0.5 text-center min-w-max mx-auto">
+                            <div><p class="text-xs font-semibold text-cyan-600 dark:text-cyan-400">{{ account.daily_follows }}</p><p class="text-xs text-gray-400">Follows</p></div>
+                            <div><p class="text-xs font-semibold text-pink-600 dark:text-pink-400">{{ account.daily_likes }}</p><p class="text-xs text-gray-400">Likes</p></div>
+                            <div><p class="text-xs font-semibold text-purple-600 dark:text-purple-400">{{ account.daily_comments }}</p><p class="text-xs text-gray-400">Cmts</p></div>
+                        </div>
+                    </td>
+
+                    <td class="td">
+                        <div class="grid grid-cols-3 gap-x-2 gap-y-0.5 text-center min-w-max mx-auto">
+                            <div><p class="text-xs font-semibold text-cyan-600 dark:text-cyan-400">{{ account.total_follows }}</p><p class="text-xs text-gray-400">Follows</p></div>
+                            <div><p class="text-xs font-semibold text-pink-600 dark:text-pink-400">{{ account.total_likes }}</p><p class="text-xs text-gray-400">Likes</p></div>
+                            <div><p class="text-xs font-semibold text-purple-600 dark:text-purple-400">{{ account.total_comments }}</p><p class="text-xs text-gray-400">Cmts</p></div>
+                        </div>
+                    </td>
+
+                    <td class="td text-right">
+                        <button onclick="deleteTTAccount('{{ account.username }}')"
+                                class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm transition-colors">
+                            <i class="fas fa-trash text-xs mr-1"></i>Delete
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="td text-center text-gray-400 dark:text-gray-500 py-10">
+                        No TikTok accounts yet.
+                        <button onclick="openModal('tt-add-modal')" class="text-cyan-600 dark:text-cyan-400 hover:underline ml-1">Add one now</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ADD TIKTOK ACCOUNT MODAL
+════════════════════════════════════════════════════════════════ -->
+<div id="tt-add-modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('tt-add-modal')"></div>
+
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-2">
+                    <i class="fab fa-tiktok text-cyan-500"></i>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Add TikTok Account</h2>
+                </div>
+                <button onclick="closeModal('tt-add-modal')"
+                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-100 dark:border-gray-700 px-6">
+                <button id="tt-tab-single-btn" onclick="switchTTTab('single')"
+                        class="tt-modal-tab py-3 px-4 text-sm font-medium border-b-2 border-cyan-500 text-cyan-600 dark:text-cyan-400 -mb-px">
+                    Single Account
+                </button>
+                <button id="tt-tab-bulk-btn" onclick="switchTTTab('bulk')"
+                        class="tt-modal-tab py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 -mb-px">
+                    Bulk Import
+                </button>
+            </div>
+
+            <!-- Single Form -->
+            <div id="tt-tab-single" class="px-6 py-5 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">Username <span class="text-red-500">*</span></label>
+                        <input id="tt-username" type="text" class="input" placeholder="@username">
+                    </div>
+                    <div>
+                        <label class="label">Password <span class="text-red-500">*</span></label>
+                        <input id="tt-password" type="password" class="input" placeholder="••••••••">
+                    </div>
+                </div>
+                <div>
+                    <label class="label">Device <span class="text-red-500">*</span></label>
+                    <select id="tt-device" class="input">
+                        <option value="">Select a device…</option>
+                        {% for device in devices %}
+                        <option value="{{ device.device_id }}">{{ device.device_name }} ({{ device.device_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">Recovery Email</label>
+                        <input id="tt-email" type="email" class="input" placeholder="email@example.com">
+                    </div>
+                    <div>
+                        <label class="label">Email Password</label>
+                        <input id="tt-email-password" type="password" class="input" placeholder="••••••••">
+                    </div>
+                </div>
+                <div id="tt-error" class="hidden text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2"></div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button onclick="closeModal('tt-add-modal')" class="btn-ghost">Cancel</button>
+                    <button onclick="addSingleTTAccount()" id="tt-submit-btn" class="btn-primary bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-500">
+                        <i class="fas fa-plus text-xs"></i> Add Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulk Form -->
+            <div id="tt-tab-bulk" class="px-6 py-5 space-y-4 hidden">
+                <div>
+                    <label class="label">Accounts (one per line)</label>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                        Format: <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">username:password</code>
+                        or <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">username:password:email:email_password</code>
+                    </p>
+                    <textarea id="tt-bulk-text" rows="10" class="input font-mono text-xs resize-y"
+                              placeholder="user1:pass1&#10;user2:pass2:user2@email.com:emailpass2"></textarea>
+                </div>
+                <div>
+                    <label class="label">Assign to Device <span class="text-red-500">*</span></label>
+                    <select id="tt-bulk-device" class="input">
+                        <option value="">Select a device…</option>
+                        {% for device in devices %}
+                        <option value="{{ device.device_id }}">{{ device.device_name }} ({{ device.device_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="tt-bulk-result" class="hidden text-sm rounded-lg px-3 py-2"></div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button onclick="closeModal('tt-add-modal')" class="btn-ghost">Cancel</button>
+                    <button onclick="addBulkTTAccounts()" id="tt-bulk-btn" class="btn-primary bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-500">
+                        <i class="fas fa-upload text-xs"></i> Import
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+    document.body.style.overflow = '';
+    document.getElementById('tt-error').classList.add('hidden');
+    document.getElementById('tt-bulk-result').classList.add('hidden');
+}
+
+function switchTTTab(tab) {
+    ['single', 'bulk'].forEach(t => {
+        document.getElementById('tt-tab-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('tt-tab-' + t + '-btn');
+        if (t === tab) {
+            btn.classList.add('border-cyan-500', 'text-cyan-600', 'dark:text-cyan-400');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+        } else {
+            btn.classList.remove('border-cyan-500', 'text-cyan-600', 'dark:text-cyan-400');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        }
+    });
+}
+
+// ── Add single TT account ─────────────────────────────────────────────────────
+async function addSingleTTAccount() {
+    const btn = document.getElementById('tt-submit-btn');
+    const errEl = document.getElementById('tt-error');
+    errEl.classList.add('hidden');
+
+    const username  = document.getElementById('tt-username').value.trim().replace(/^@/, '');
+    const password  = document.getElementById('tt-password').value;
+    const device_id = document.getElementById('tt-device').value;
+    const email     = document.getElementById('tt-email').value.trim();
+    const email_pwd = document.getElementById('tt-email-password').value;
+
+    if (!username || !password) {
+        errEl.textContent = 'Username and password are required.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+    if (!device_id) {
+        errEl.textContent = 'Please select a device.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Adding…';
+
+    try {
+        const body = { username, password, device_id };
+        if (email) body.email = email;
+        if (email_pwd) body.email_password = email_pwd;
+
+        const resp = await fetch('/api/tiktok/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(`TikTok @${username} added!`, 'success');
+            closeModal('tt-add-modal');
+            location.reload();
+        } else {
+            errEl.textContent = data.error || 'Failed to add account.';
+            errEl.classList.remove('hidden');
+        }
+    } catch (err) {
+        errEl.textContent = 'Network error: ' + err;
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus text-xs"></i> Add Account';
+    }
+}
+
+// ── Bulk import TT accounts ───────────────────────────────────────────────────
+async function addBulkTTAccounts() {
+    const btn   = document.getElementById('tt-bulk-btn');
+    const resEl = document.getElementById('tt-bulk-result');
+    resEl.classList.add('hidden');
+
+    const raw       = document.getElementById('tt-bulk-text').value.trim();
+    const device_id = document.getElementById('tt-bulk-device').value;
+
+    if (!raw) { resEl.textContent = 'Paste at least one account.'; resEl.classList.remove('hidden'); return; }
+    if (!device_id) { resEl.textContent = 'Please select a device.'; resEl.classList.remove('hidden'); return; }
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    let added = 0, failed = 0;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Importing…';
+
+    for (const line of lines) {
+        const [username, password, email, email_password] = line.split(':');
+        if (!username || !password) { failed++; continue; }
+        try {
+            const body = { username: username.replace(/^@/, ''), password, device_id };
+            if (email) body.email = email;
+            if (email_password) body.email_password = email_password;
+            const resp = await fetch('/api/tiktok/accounts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await resp.json();
+            data.success ? added++ : failed++;
+        } catch { failed++; }
+    }
+
+    resEl.textContent = `Done! Added: ${added}, Failed: ${failed}.`;
+    resEl.className = `text-sm rounded-lg px-3 py-2 ${added > 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`;
+    resEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-upload text-xs"></i> Import';
+    if (added > 0) { setTimeout(() => { closeModal('tt-add-modal'); location.reload(); }, 1500); }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function deleteTTAccount(username) {
+    if (!confirm(`Delete TikTok @${username}?`)) return;
+    fetch(`/api/tiktok/accounts/${username}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) { showToast(`@${username} deleted`, 'success'); location.reload(); }
+            else { showToast(data.error || 'Delete failed', 'error'); }
+        });
+}
+
+function bulkDeleteTTAccounts() {
+    const selected = Array.from(document.querySelectorAll('input[name="selected_accounts"]:checked')).map(cb => cb.value);
+    if (!selected.length) { showToast('Select at least one account', 'info'); return; }
+    if (!confirm(`Delete ${selected.length} account(s)?`)) return;
+    fetch('/api/tiktok/accounts/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames: selected }),
+    }).then(r => r.json()).then(data => {
+        if (data.success) { showToast(`Deleted ${selected.length}`, 'success'); location.reload(); }
+        else { showToast(data.error || 'Failed', 'error'); }
+    });
+}
+
+// ── Select all ────────────────────────────────────────────────────────────────
+function toggleSelectAll(cb) {
+    document.querySelectorAll('input[name="selected_accounts"]').forEach(el => el.checked = cb.checked);
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    ['ttSearch', 'ttDeviceFilter'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', filterTTRows);
+        document.getElementById(id)?.addEventListener('change', filterTTRows);
+    });
+});
+
+function filterTTRows() {
+    const search = document.getElementById('ttSearch').value.toLowerCase();
+    const device = document.getElementById('ttDeviceFilter').value;
+    document.querySelectorAll('.tt-row').forEach(row => {
+        const matchSearch = !search || row.dataset.username.toLowerCase().includes(search);
+        const matchDevice = !device || row.dataset.device === device;
+        row.style.display = matchSearch && matchDevice ? '' : 'none';
+    });
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal('tt-add-modal'); });
+</script>
+{% endblock %}

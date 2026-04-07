@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} — Phone Farm</title>
+
+    <!-- Tailwind v3 Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Component styles (regular CSS — dark mode via html.dark parent) -->
+    <style>
+        /* ── Base ───────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; }
+        body { -webkit-font-smoothing: antialiased; font-family: ui-sans-serif, system-ui, sans-serif; }
+        a { text-decoration: none; }
+
+        /* ── Card ───────────────────────────────────────────────── */
+        .card {
+            background: #fff;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0/.1), 0 1px 2px -1px rgb(0 0 0/.1);
+            border: 1px solid #f3f4f6;
+        }
+        html.dark .card { background: #1f2937; border-color: #374151; }
+
+        /* ── Buttons ────────────────────────────────────────────── */
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .5rem 1rem; border-radius: .5rem;
+            font-size: .875rem; font-weight: 500; cursor: pointer;
+            background: #4f46e5; color: #fff; border: none;
+            transition: background 150ms;
+        }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-primary:focus { outline: none; box-shadow: 0 0 0 3px rgb(99 102 241/.4); }
+        .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+
+        .btn-danger {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .5rem 1rem; border-radius: .5rem;
+            font-size: .875rem; font-weight: 500; cursor: pointer;
+            background: #dc2626; color: #fff; border: none;
+            transition: background 150ms;
+        }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-danger:disabled { opacity: .6; cursor: not-allowed; }
+
+        .btn-ghost {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .5rem 1rem; border-radius: .5rem;
+            font-size: .875rem; font-weight: 500; cursor: pointer;
+            background: #fff; color: #374151;
+            border: 1px solid #e5e7eb; transition: background 150ms;
+        }
+        .btn-ghost:hover { background: #f9fafb; }
+        html.dark .btn-ghost {
+            background: transparent; color: #d1d5db; border-color: #4b5563;
+        }
+        html.dark .btn-ghost:hover { background: #374151; }
+
+        /* ── Input / Select ─────────────────────────────────────── */
+        .input {
+            display: block; width: 100%;
+            padding: .5rem .75rem; border-radius: .5rem;
+            font-size: .875rem; color: #111827;
+            background: #fff; border: 1px solid #e5e7eb;
+            transition: border-color 150ms, box-shadow 150ms;
+        }
+        .input:focus {
+            outline: none; border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgb(99 102 241/.25);
+        }
+        .input::placeholder { color: #9ca3af; }
+        html.dark .input { background: #374151; border-color: #4b5563; color: #f3f4f6; }
+        html.dark .input::placeholder { color: #6b7280; }
+        html.dark .input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgb(99 102 241/.3); }
+
+        /* ── Label ──────────────────────────────────────────────── */
+        .label {
+            display: block; font-size: .875rem;
+            font-weight: 500; color: #374151; margin-bottom: .25rem;
+        }
+        html.dark .label { color: #d1d5db; }
+
+        /* ── Table helpers ──────────────────────────────────────── */
+        .th {
+            padding: .75rem 1rem;
+            text-align: left; font-size: .75rem; font-weight: 600;
+            color: #6b7280; text-transform: uppercase; letter-spacing: .05em;
+            background: #f9fafb;
+        }
+        html.dark .th { color: #9ca3af; background: #1f2937; }
+
+        .td { padding: .75rem 1rem; font-size: .875rem; color: #374151; }
+        html.dark .td { color: #d1d5db; }
+
+        /* ── Nav link ───────────────────────────────────────────── */
+        .nav-link {
+            display: flex; align-items: center; gap: .5rem;
+            padding: .375rem .75rem; border-radius: .5rem;
+            font-size: .875rem; font-weight: 500;
+            color: #4b5563; transition: background 150ms, color 150ms;
+        }
+        .nav-link:hover { background: #f3f4f6; color: #111827; }
+        .nav-link.active { background: #eef2ff; color: #4f46e5; }
+        html.dark .nav-link { color: #d1d5db; }
+        html.dark .nav-link:hover { background: #374151; color: #f9fafb; }
+        html.dark .nav-link.active { background: rgba(99,102,241,.15); color: #818cf8; }
+
+        /* ── Toast ──────────────────────────────────────────────── */
+        .toast {
+            position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 9999;
+            display: flex; align-items: center; gap: .75rem;
+            padding: .75rem 1.25rem; border-radius: .75rem;
+            color: #fff; font-size: .875rem; font-weight: 500;
+            box-shadow: 0 4px 12px rgb(0 0 0/.15);
+            transition: opacity .3s;
+        }
+        .toast-success { background: #16a34a; }
+        .toast-error   { background: #dc2626; }
+        .toast-info    { background: #2563eb; }
+
+        /* ── Scrollbar (webkit) ─────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200">
+
+<!-- ── Top Navigation ──────────────────────────────────────────────────────── -->
+<nav class="fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-4 gap-6
+            bg-white dark:bg-gray-800
+            border-b border-gray-200 dark:border-gray-700 shadow-sm">
+
+    <!-- Brand -->
+    <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-2 flex-shrink-0">
+        <div class="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <i class="fas fa-mobile-alt text-white" style="font-size:.65rem"></i>
+        </div>
+        <span class="font-bold text-gray-900 dark:text-white text-sm tracking-tight">Phone Farm</span>
+    </a>
+
+    <!-- Links -->
+    <div class="flex items-center gap-1 flex-1 overflow-x-auto">
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-chart-line fa-fw text-xs"></i><span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('admin.devices') }}"
+           class="nav-link {% if request.endpoint == 'admin.devices' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-mobile-alt fa-fw text-xs"></i><span>Devices</span>
+        </a>
+        <a href="{{ url_for('admin.instagram_accounts') }}"
+           class="nav-link {% if request.endpoint == 'admin.instagram_accounts' %}active{% endif %} whitespace-nowrap">
+            <i class="fab fa-instagram fa-fw text-xs"></i><span>Instagram</span>
+        </a>
+        <a href="{{ url_for('admin.tiktok_accounts') }}"
+           class="nav-link {% if request.endpoint == 'admin.tiktok_accounts' %}active{% endif %} whitespace-nowrap">
+            <i class="fab fa-tiktok fa-fw text-xs"></i><span>TikTok</span>
+        </a>
+        <a href="{{ url_for('admin.tasks') }}"
+           class="nav-link {% if request.endpoint == 'admin.tasks' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-tasks fa-fw text-xs"></i><span>Tasks</span>
+        </a>
+        <a href="{{ url_for('admin.api_docs') }}"
+           class="nav-link {% if request.endpoint == 'admin.api_docs' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-code fa-fw text-xs"></i><span>API Docs</span>
+        </a>
+    </div>
+
+    <!-- Dark mode toggle -->
+    <button id="theme-toggle" onclick="toggleTheme()"
+            title="Toggle dark / light mode"
+            class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center
+                   text-gray-500 dark:text-gray-400
+                   hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
+        <i id="theme-icon" class="fas fa-moon text-sm"></i>
+    </button>
+</nav>
+
+<!-- ── Main ────────────────────────────────────────────────────────────────── -->
+<main class="pt-14 min-h-screen">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- ── Dark mode JS ────────────────────────────────────────────────────────── -->
+<script>
+(function () {
+    const stored = localStorage.getItem('phonefarm_theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+    }
+})();
+
+function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('phonefarm_theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-sun text-sm' : 'fas fa-moon text-sm';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.getElementById('theme-icon').className = isDark ? 'fas fa-sun text-sm' : 'fas fa-moon text-sm';
+});
+
+/* ── Global toast helper ─────────────────────────────────────────────────── */
+function showToast(msg, type) {
+    type = type || 'info';
+    var el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.innerHTML = '<span>' + msg + '</span>';
+    document.body.appendChild(el);
+    setTimeout(function () {
+        el.style.opacity = '0';
+        setTimeout(function () { el.remove(); }, 300);
+    }, 3000);
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,247 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Overview of your phone farm activity</p>
+</div>
+
+<!-- Device stats -->
+<div class="mb-2">
+    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Devices</p>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total</span>
+            <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <i class="fas fa-mobile-alt text-gray-500 dark:text-gray-400 text-xs"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats.total_devices }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">registered devices</p>
+    </div>
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Connected</span>
+            <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+                <i class="fas fa-plug text-green-500 text-xs"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.connected_devices }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">online right now</p>
+    </div>
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Assigned</span>
+            <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <i class="fas fa-link text-blue-500 text-xs"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ stats.assigned_devices }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">with accounts</p>
+    </div>
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Unassigned</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                <i class="fas fa-question text-amber-500 text-xs"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ stats.total_devices - stats.assigned_devices }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">free devices</p>
+    </div>
+</div>
+
+<!-- Account stats -->
+<div class="mb-2">
+    <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Accounts</p>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+    <!-- IG Logged In -->
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">IG Logged In</span>
+            <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+                <i class="fab fa-instagram text-green-500 text-xs"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ stats.active_accounts }}</p>
+        <div class="mt-2">
+            {% if stats.ig_total > 0 %}
+            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 mb-1">
+                <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ ((stats.active_accounts / stats.ig_total) * 100)|int }}%"></div>
+            </div>
+            {% endif %}
+            <p class="text-xs text-gray-400 dark:text-gray-500">of {{ stats.ig_total }} total</p>
+        </div>
+    </div>
+    <!-- IG Errors -->
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">IG Errors</span>
+            <div class="w-8 h-8 rounded-lg {% if stats.ig_errors > 0 %}bg-red-50 dark:bg-red-900/30{% else %}bg-gray-50 dark:bg-gray-700{% endif %} flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle {% if stats.ig_errors > 0 %}text-red-500{% else %}text-gray-400{% endif %} text-xs"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold {% if stats.ig_errors > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %}">{{ stats.ig_errors }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% if stats.ig_errors > 0 %}need attention{% else %}all healthy{% endif %}</p>
+    </div>
+    <!-- TikTok -->
+    <div class="card p-5 border-l-4 border-cyan-400">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">TikTok</span>
+            <i class="fab fa-tiktok text-cyan-500 text-lg"></i>
+        </div>
+        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats.tiktok_total }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">configured accounts</p>
+    </div>
+    <!-- Today IG -->
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Today's IG Actions</span>
+            <div class="w-8 h-8 rounded-lg bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center">
+                <i class="fas fa-bolt text-pink-500 text-xs"></i>
+            </div>
+        </div>
+        {% set ig_today = stats.daily_stats.likes + stats.daily_stats.comments + stats.daily_stats.follows + stats.daily_stats.unfollows + stats.daily_stats.stories_viewed + stats.daily_stats.story_likes %}
+        <p class="text-3xl font-bold text-pink-600 dark:text-pink-400">{{ ig_today }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">likes, follows, comments...</p>
+    </div>
+    <!-- Today TT -->
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Today's TT Actions</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">
+                <i class="fas fa-bolt text-cyan-500 text-xs"></i>
+            </div>
+        </div>
+        {% set tt_today = stats.tiktok_daily.follows + stats.tiktok_daily.likes + stats.tiktok_daily.comments + stats.tiktok_daily.story_likes + stats.tiktok_daily.profile_views %}
+        <p class="text-3xl font-bold text-cyan-600 dark:text-cyan-400">{{ tt_today }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">follows, likes, comments...</p>
+    </div>
+</div>
+
+<!-- Two-column breakdown -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+            <i class="fab fa-instagram text-pink-500"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-100">Instagram — Today</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+            {% set ig = stats.daily_stats %}
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ig.likes }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Likes</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ig.follows }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Follows</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ig.unfollows }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Unfollows</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ig.comments }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Comments</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ig.stories_viewed }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Stories</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ ig.story_likes }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Story Likes</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+            <i class="fab fa-tiktok text-cyan-500"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-100">TikTok — Today</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+            {% set tt = stats.tiktok_daily %}
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ tt.likes }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Likes</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ tt.follows }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Follows</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ tt.comments }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Comments</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ tt.story_likes }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Story Likes</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ tt.profile_views }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Profile Views</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device overview table -->
+<div class="card overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-800 dark:text-gray-100">Device Overview</h3>
+        <a href="{{ url_for('admin.devices') }}" class="btn-ghost text-xs py-1.5 px-3">
+            Manage <i class="fas fa-arrow-right text-xs"></i>
+        </a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b border-gray-100 dark:border-gray-700">
+                    <th class="th">Device</th>
+                    <th class="th">Status</th>
+                    <th class="th">Platform</th>
+                    <th class="th">Assigned To</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
+                {% for device in devices %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="td">
+                        <div class="font-medium text-gray-900 dark:text-gray-100">{{ device.device_name }}</div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 font-mono">{{ device.device_id }}</div>
+                    </td>
+                    <td class="td">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if device.status == 'connected' %}bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400
+                            {% elif device.status == 'error' %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400
+                            {% else %}bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full
+                                {% if device.status == 'connected' %}bg-green-500
+                                {% elif device.status == 'error' %}bg-red-500
+                                {% else %}bg-gray-400{% endif %}"></span>
+                            {{ device.status|title }}
+                        </span>
+                    </td>
+                    <td class="td">
+                        <span class="text-xs">{{ device.platform|title if device.platform else 'Instagram' }}</span>
+                    </td>
+                    <td class="td text-gray-500 dark:text-gray-400">{{ device.assigned_to or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="td text-center text-gray-400 dark:text-gray-500 py-8">No devices registered yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

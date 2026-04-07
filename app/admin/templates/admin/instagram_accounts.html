@@ -1,0 +1,467 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Instagram Accounts{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Instagram Accounts</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage accounts and monitor activity</p>
+    </div>
+    <button onclick="openModal('add-modal')" class="btn-primary">
+        <i class="fas fa-plus text-xs"></i> Add Account
+    </button>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Total</p>
+        <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ instagram_accounts|length }}</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Active</p>
+        <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+            {{ instagram_accounts|selectattr('login_status')|list|length }}
+        </p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Today Follows</p>
+        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+            {% set tf = namespace(v=0) %}{% for a in instagram_accounts %}{% set tf.v = tf.v + a.daily_follows %}{% endfor %}{{ tf.v }}
+        </p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400">Today Likes</p>
+        <p class="text-2xl font-bold text-pink-600 dark:text-pink-400 mt-1">
+            {% set tl = namespace(v=0) %}{% for a in instagram_accounts %}{% set tl.v = tl.v + a.daily_likes %}{% endfor %}{{ tl.v }}
+        </p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card p-4 mb-4 flex flex-wrap gap-3">
+    <input id="accountSearch" type="text" placeholder="Search by username or email…" class="input w-56">
+    <select id="statusFilter" class="input w-36">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+    </select>
+    <select id="deviceFilter" class="input w-44">
+        <option value="">All Devices</option>
+        {% for device in devices %}
+        <option value="{{ device.device_id }}">{{ device.device_name }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="bulkDeleteAccounts()" class="btn-danger ml-auto">
+        <i class="fas fa-trash text-xs"></i> Delete Selected
+    </button>
+</div>
+
+<!-- Accounts Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead>
+                <tr class="border-b border-gray-100 dark:border-gray-700">
+                    <th class="th w-8">
+                        <input type="checkbox" onclick="toggleSelectAll(this)"
+                            class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:bg-gray-700">
+                    </th>
+                    <th class="th">Account</th>
+                    <th class="th">Device</th>
+                    <th class="th text-center">Daily Stats</th>
+                    <th class="th text-center">Total Stats</th>
+                    <th class="th text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50" id="accountsBody">
+                {% for account in instagram_accounts %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors account-row"
+                    data-username="{{ account.username }}"
+                    data-email="{{ account.email or '' }}"
+                    data-status="{{ 'active' if account.login_status else 'inactive' }}"
+                    data-device="{{ account.device_id or '' }}">
+
+                    <td class="td">
+                        <input type="checkbox" name="selected_accounts" value="{{ account.username }}"
+                            class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:bg-gray-700">
+                    </td>
+
+                    <td class="td">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                                {{ account.username[0]|upper }}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-gray-100">{{ account.username }}</div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500">{{ account.email or '—' }}</div>
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium
+                                    {% if account.login_status %}bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400
+                                    {% else %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400{% endif %}">
+                                    {{ 'Active' if account.login_status else 'Inactive' }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="td">
+                        {% if account.device_id %}
+                        <div class="text-sm text-gray-700 dark:text-gray-300 font-mono text-xs">{{ account.device_id }}</div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500">{{ account.format_last_login() }}</div>
+                        {% else %}
+                        <span class="text-xs text-gray-400 dark:text-gray-500">Not assigned</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="td">
+                        <div class="grid grid-cols-3 gap-x-3 gap-y-1 text-center min-w-max mx-auto">
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.daily_likes }}</p><p class="text-xs text-gray-400">Likes</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.daily_follows }}</p><p class="text-xs text-gray-400">Follows</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.daily_unfollows }}</p><p class="text-xs text-gray-400">Unfollows</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.daily_comments }}</p><p class="text-xs text-gray-400">Cmts</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.daily_stories_viewed }}</p><p class="text-xs text-gray-400">Stories</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.daily_dms }}</p><p class="text-xs text-gray-400">DMs</p></div>
+                        </div>
+                    </td>
+
+                    <td class="td">
+                        <div class="grid grid-cols-3 gap-x-3 gap-y-1 text-center min-w-max mx-auto">
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.total_likes }}</p><p class="text-xs text-gray-400">Likes</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.total_follows }}</p><p class="text-xs text-gray-400">Follows</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.total_unfollows }}</p><p class="text-xs text-gray-400">Unfollows</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.total_comments }}</p><p class="text-xs text-gray-400">Cmts</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.total_stories_viewed }}</p><p class="text-xs text-gray-400">Stories</p></div>
+                            <div><p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ account.total_dms }}</p><p class="text-xs text-gray-400">DMs</p></div>
+                        </div>
+                    </td>
+
+                    <td class="td text-right">
+                        <button onclick="deleteAccount('{{ account.username }}')"
+                                class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm transition-colors">
+                            <i class="fas fa-trash text-xs mr-1"></i>Delete
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="td text-center text-gray-400 dark:text-gray-500 py-10">
+                        No Instagram accounts yet.
+                        <button onclick="openModal('add-modal')" class="text-indigo-600 dark:text-indigo-400 hover:underline ml-1">Add one now</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ADD ACCOUNT MODAL
+════════════════════════════════════════════════════════════════ -->
+<div id="add-modal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('add-modal')"></div>
+
+    <!-- Panel -->
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+
+            <!-- Modal header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Add Instagram Account</h2>
+                <button onclick="closeModal('add-modal')"
+                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-100 dark:border-gray-700 px-6">
+                <button id="tab-single-btn" onclick="switchTab('single')"
+                        class="modal-tab py-3 px-4 text-sm font-medium border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 -mb-px">
+                    Single Account
+                </button>
+                <button id="tab-bulk-btn" onclick="switchTab('bulk')"
+                        class="modal-tab py-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 -mb-px">
+                    Bulk Import
+                </button>
+            </div>
+
+            <!-- Single Account Form -->
+            <div id="tab-single" class="px-6 py-5 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">Username <span class="text-red-500">*</span></label>
+                        <input id="ig-username" type="text" class="input" placeholder="@username">
+                    </div>
+                    <div>
+                        <label class="label">Password <span class="text-red-500">*</span></label>
+                        <input id="ig-password" type="password" class="input" placeholder="••••••••">
+                    </div>
+                </div>
+                <div>
+                    <label class="label">Device</label>
+                    <select id="ig-device" class="input">
+                        <option value="">No device assigned</option>
+                        {% for device in devices %}
+                        <option value="{{ device.device_id }}">{{ device.device_name }} ({{ device.device_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label">Recovery Email</label>
+                        <input id="ig-email" type="email" class="input" placeholder="email@example.com">
+                    </div>
+                    <div>
+                        <label class="label">Email Password</label>
+                        <input id="ig-email-password" type="password" class="input" placeholder="••••••••">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
+                        <label class="label">IMAP Server</label>
+                        <input id="ig-imap-server" type="text" class="input" placeholder="imap.gmail.com">
+                    </div>
+                    <div>
+                        <label class="label">IMAP Port</label>
+                        <input id="ig-imap-port" type="number" class="input" placeholder="993" value="993">
+                    </div>
+                </div>
+                <div id="ig-error" class="hidden text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2"></div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button onclick="closeModal('add-modal')" class="btn-ghost">Cancel</button>
+                    <button onclick="addSingleIGAccount()" id="ig-submit-btn" class="btn-primary">
+                        <i class="fas fa-plus text-xs"></i> Add Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulk Import Form -->
+            <div id="tab-bulk" class="px-6 py-5 space-y-4 hidden">
+                <div>
+                    <label class="label">Accounts (one per line)</label>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                        One account per line. Columns separated by <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">:</code><br>
+                        <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">username:password</code><br>
+                        <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">username:password:email:email_password</code><br>
+                        <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">username:password:email:email_password:imap_server:imap_port</code>
+                    </p>
+                    <textarea id="ig-bulk-text" rows="10" class="input font-mono text-xs resize-y"
+                              placeholder="user1:pass1&#10;user2:pass2:user2@gmail.com:emailpass&#10;user3:pass3:user3@gmail.com:emailpass:imap.gmail.com:993"></textarea>
+                </div>
+                <div>
+                    <label class="label">Assign to Device</label>
+                    <select id="ig-bulk-device" class="input">
+                        <option value="">No device assigned</option>
+                        {% for device in devices %}
+                        <option value="{{ device.device_id }}">{{ device.device_name }} ({{ device.device_id }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="ig-bulk-result" class="hidden text-sm rounded-lg px-3 py-2"></div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button onclick="closeModal('add-modal')" class="btn-ghost">Cancel</button>
+                    <button onclick="addBulkIGAccounts()" id="ig-bulk-btn" class="btn-primary">
+                        <i class="fas fa-upload text-xs"></i> Import
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+    document.body.style.overflow = '';
+    // reset forms
+    document.getElementById('ig-error').classList.add('hidden');
+    document.getElementById('ig-bulk-result').classList.add('hidden');
+}
+
+function switchTab(tab) {
+    ['single', 'bulk'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('tab-' + t + '-btn');
+        if (t === tab) {
+            btn.classList.add('border-indigo-500', 'text-indigo-600', 'dark:text-indigo-400');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+        } else {
+            btn.classList.remove('border-indigo-500', 'text-indigo-600', 'dark:text-indigo-400');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        }
+    });
+}
+
+// ── Add single IG account ─────────────────────────────────────────────────────
+async function addSingleIGAccount() {
+    const btn = document.getElementById('ig-submit-btn');
+    const errEl = document.getElementById('ig-error');
+    errEl.classList.add('hidden');
+
+    const username     = document.getElementById('ig-username').value.trim().replace(/^@/, '');
+    const password     = document.getElementById('ig-password').value;
+    const device_id    = document.getElementById('ig-device').value;
+    const email        = document.getElementById('ig-email').value.trim();
+    const email_password  = document.getElementById('ig-email-password').value;
+    const imap_server  = document.getElementById('ig-imap-server').value.trim();
+    const imap_port    = document.getElementById('ig-imap-port').value.trim();
+
+    if (!username || !password) {
+        errEl.textContent = 'Username and password are required.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Adding…';
+
+    try {
+        const body = { username, password };
+        if (device_id)    body.device_id    = device_id;
+        if (email)        body.email        = email;
+        if (email_password) body.email_password = email_password;
+        if (imap_server)  body.imap_server  = imap_server;
+        if (imap_port)    body.imap_port    = parseInt(imap_port);
+
+        const resp = await fetch('/api/instagram/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(`Account @${username} added!`, 'success');
+            closeModal('add-modal');
+            location.reload();
+        } else {
+            errEl.textContent = data.error || 'Failed to add account.';
+            errEl.classList.remove('hidden');
+        }
+    } catch (err) {
+        errEl.textContent = 'Network error: ' + err;
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus text-xs"></i> Add Account';
+    }
+}
+
+// ── Bulk import IG accounts ───────────────────────────────────────────────────
+async function addBulkIGAccounts() {
+    const btn = document.getElementById('ig-bulk-btn');
+    const resEl = document.getElementById('ig-bulk-result');
+    resEl.classList.add('hidden');
+
+    const raw = document.getElementById('ig-bulk-text').value.trim();
+    const device_id = document.getElementById('ig-bulk-device').value;
+
+    if (!raw) { resEl.textContent = 'Paste at least one account.'; resEl.classList.remove('hidden'); return; }
+
+    const accounts = raw.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+        const parts = line.split(':');
+        // format: username:password[:email[:email_password[:imap_server[:imap_port]]]]
+        const obj = { username: parts[0], password: parts[1] || '' };
+        if (device_id)  obj.device_id    = device_id;
+        if (parts[2])   obj.email         = parts[2];
+        if (parts[3])   obj.email_password = parts[3];
+        if (parts[4])   obj.imap_server   = parts[4];
+        if (parts[5])   obj.imap_port     = parseInt(parts[5]);
+        return obj;
+    });
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Importing…';
+
+    try {
+        const resp = await fetch('/api/instagram/accounts/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accounts }),
+        });
+        const data = await resp.json();
+        const added = data.added || 0;
+        const failed = (data.failed || []).length;
+        resEl.textContent = `Done! Added: ${added}, Failed: ${failed}.`;
+        resEl.className = `text-sm rounded-lg px-3 py-2 ${added > 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`;
+        resEl.classList.remove('hidden');
+        if (added > 0) { setTimeout(() => { closeModal('add-modal'); location.reload(); }, 1500); }
+    } catch (err) {
+        resEl.textContent = 'Network error: ' + err;
+        resEl.className = 'text-sm rounded-lg px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
+        resEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload text-xs"></i> Import';
+    }
+}
+
+// ── Delete single ─────────────────────────────────────────────────────────────
+function deleteAccount(username) {
+    if (!confirm(`Delete @${username}? This cannot be undone.`)) return;
+    fetch(`/api/instagram/accounts/${username}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) { showToast(`@${username} deleted`, 'success'); location.reload(); }
+            else { showToast(data.error || 'Delete failed', 'error'); }
+        });
+}
+
+// ── Bulk delete ───────────────────────────────────────────────────────────────
+function bulkDeleteAccounts() {
+    const selected = Array.from(document.querySelectorAll('input[name="selected_accounts"]:checked')).map(cb => cb.value);
+    if (!selected.length) { showToast('Select at least one account', 'info'); return; }
+    if (!confirm(`Delete ${selected.length} account(s)?`)) return;
+    fetch('/api/instagram/accounts/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames: selected }),
+    }).then(r => r.json()).then(data => {
+        if (data.success) { showToast(`Deleted ${selected.length} account(s)`, 'success'); location.reload(); }
+        else { showToast(data.error || 'Delete failed', 'error'); }
+    });
+}
+
+// ── Select all ────────────────────────────────────────────────────────────────
+function toggleSelectAll(cb) {
+    document.querySelectorAll('input[name="selected_accounts"]').forEach(el => el.checked = cb.checked);
+}
+
+// ── Client-side filter ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    ['accountSearch', 'statusFilter', 'deviceFilter'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', filterRows);
+        document.getElementById(id)?.addEventListener('change', filterRows);
+    });
+});
+
+function filterRows() {
+    const search = document.getElementById('accountSearch').value.toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    const device = document.getElementById('deviceFilter').value;
+
+    document.querySelectorAll('.account-row').forEach(row => {
+        const matchSearch = !search || row.dataset.username.includes(search) || row.dataset.email.includes(search);
+        const matchStatus = !status || row.dataset.status === status;
+        const matchDevice = !device || row.dataset.device === device;
+        row.style.display = matchSearch && matchStatus && matchDevice ? '' : 'none';
+    });
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal('add-modal'); });
+</script>
+{% endblock %}
