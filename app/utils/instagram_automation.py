@@ -403,6 +403,13 @@ class InstagramAutomation:
                if d(description="Clear Username, email or mobile number text").exists:
                     d(description="Clear Username, email or mobile number text").click()
                     time.sleep(2)
+            if d.xpath(username_field_xpath4).exists:  
+               username_field_xpath = username_field_xpath4             
+               d.xpath(username_field_xpath4).click()
+               time.sleep(3)
+               if d(description="Clear Username, email or mobile number text").exists:
+                    d(description="Clear Username, email or mobile number text").click()
+                    time.sleep(2)
             if d.xpath(username_field_xpath2).exists:   
                username_field_xpath = username_field_xpath2
                d.xpath(username_field_xpath).click()
@@ -410,6 +417,13 @@ class InstagramAutomation:
                if d(description="Clear Username, email or mobile number text").exists:
                     d(description="Clear Username, email or mobile number text").click()
                     time.sleep(2)            
+            if d.xpath(username_field_xpath3).exists:   
+               username_field_xpath = username_field_xpath3
+               d.xpath(username_field_xpath).click()
+               time.sleep(3)
+               if d(description="Clear Username, email address or mobile number text").exists:
+                    d(description="Clear Username, email address or mobile number text").click()
+                    time.sleep(2)        
             
             if d.xpath(username_field_xpath).exists:
                 # Clear Instagram data and proceed with fresh login
