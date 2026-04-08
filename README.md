@@ -340,6 +340,7 @@ flask db upgrade
 ## Integration & Premium Support
 
 - The API integrates with platforms like **Nextpost** or custom panels via `SERVER_URL` and the `/api` endpoints.
+- Do you need coaching about how to setup phone farm, manage it and monetize it? Contact with me. 
 - **Telegram**: [@kanibaspinar](https://t.me/kanibaspinar)
 - **Email**: kanibaspinar07@gmail.com
 
