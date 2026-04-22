@@ -3,7 +3,19 @@ from flask import Blueprint
 bp = Blueprint('api', __name__)
 
 # Import routes after creating blueprint to avoid circular imports
-from app.api import device_routes, instagram_routes, tiktok_routes
+from app.api import device_routes, instagram_routes, tiktok_routes, proxy_routes
+
+# ---------------------------------------------------------------------------
+# Proxy routes
+# ---------------------------------------------------------------------------
+bp.add_url_rule('/proxy/config', 'get_proxy_config', proxy_routes.get_proxy_config, methods=['GET'])
+bp.add_url_rule('/proxy/config', 'set_proxy_config', proxy_routes.set_proxy_config, methods=['POST'])
+bp.add_url_rule('/proxy/sync', 'sync_proxies', proxy_routes.sync_proxies, methods=['POST'])
+bp.add_url_rule('/proxy/list', 'list_proxies', proxy_routes.list_proxies, methods=['GET'])
+bp.add_url_rule('/proxy/<proxy_id>', 'delete_proxy', proxy_routes.delete_proxy, methods=['DELETE'])
+bp.add_url_rule('/proxy/assign', 'assign_proxy', proxy_routes.assign_proxy, methods=['POST'])
+bp.add_url_rule('/proxy/unassign', 'unassign_proxy', proxy_routes.unassign_proxy, methods=['POST'])
+bp.add_url_rule('/proxy/bulk-unassign', 'bulk_unassign_proxies', proxy_routes.bulk_unassign_proxies, methods=['POST'])
 
 # ---------------------------------------------------------------------------
 # Device routes
@@ -41,6 +53,9 @@ bp.add_url_rule('/instagram/actions/comment-post', 'comment_post', instagram_rou
 bp.add_url_rule('/instagram/actions/post-reel', 'post_reel', instagram_routes.post_reel, methods=['POST'])
 bp.add_url_rule('/instagram/actions/post-photo', 'post_photo', instagram_routes.post_photo, methods=['POST'])
 bp.add_url_rule('/instagram/actions/upload-media', 'upload_media', instagram_routes.upload_media, methods=['POST'])
+bp.add_url_rule('/instagram/accounts/create-new', 'create_instagram_account', instagram_routes.create_instagram_account, methods=['POST'])
+bp.add_url_rule('/instagram/accounts/creation-status/<task_id>', 'get_creation_status', instagram_routes.get_creation_status, methods=['GET'])
+bp.add_url_rule('/instagram/accounts/creation-jobs', 'list_creation_jobs', instagram_routes.list_creation_jobs, methods=['GET'])
 
 # ---------------------------------------------------------------------------
 # TikTok routes
@@ -55,6 +70,10 @@ bp.add_url_rule('/tiktok/accounts/bulk-delete', 'bulk_delete_tiktok_accounts', t
 bp.add_url_rule('/tiktok/tasks', 'get_all_tiktok_tasks', tiktok_routes.get_all_tiktok_tasks, methods=['GET'])
 bp.add_url_rule('/tiktok/tasks/<task_id>', 'get_tiktok_task_status', tiktok_routes.get_tiktok_task_status, methods=['GET'])
 bp.add_url_rule('/tiktok/tasks/<task_id>/stop', 'stop_tiktok_task', tiktok_routes.stop_tiktok_task, methods=['POST'])
+# Account creation
+bp.add_url_rule('/tiktok/accounts/create-new', 'create_tiktok_account', tiktok_routes.create_tiktok_account, methods=['POST'])
+bp.add_url_rule('/tiktok/accounts/creation-status/<task_id>', 'get_tiktok_creation_status', tiktok_routes.get_tiktok_creation_status, methods=['GET'])
+bp.add_url_rule('/tiktok/accounts/creation-jobs', 'list_tiktok_creation_jobs', tiktok_routes.list_tiktok_creation_jobs, methods=['GET'])
 # Single-target actions
 bp.add_url_rule('/tiktok/actions/follow', 'tiktok_follow', tiktok_routes.tiktok_follow, methods=['POST'])
 bp.add_url_rule('/tiktok/actions/like-posts', 'tiktok_like_posts', tiktok_routes.tiktok_like_posts, methods=['POST'])

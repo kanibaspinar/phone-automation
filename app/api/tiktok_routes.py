@@ -375,3 +375,88 @@ def tiktok_run_collection():
     except Exception as e:
         logger.error(f'tiktok_run_collection: {e}')
         return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Account creation (automated on-device signup)
+# ---------------------------------------------------------------------------
+
+def create_tiktok_account():
+    """POST /tiktok/accounts/create-new
+
+    Launches a background job that opens TikTok on the target device and
+    completes the full signup flow automatically.
+
+    Body:
+      device_id       str  required
+      password        str  required  (min 8 chars for TikTok)
+      email           str  required* (if phone_number omitted)
+      email_password  str  required* (when email provided)
+      phone_number    str  required* (if email omitted)
+      username        str  optional  (suffix appended if taken)
+      full_name       str  optional
+      birthday        str  optional  YYYY-MM-DD, default 1998-05-20
+      imap_server     str  optional  override auto-detected IMAP host
+      imap_port       int  optional  default 993
+    """
+    try:
+        from app.utils.tiktok_account_creator import start_creation_job
+
+        data = request.get_json() or {}
+
+        if not data.get('device_id'):
+            return jsonify({'error': 'device_id is required'}), 400
+
+        if not data.get('password'):
+            return jsonify({'error': 'password is required'}), 400
+
+        if len(data['password']) < 8:
+            return jsonify({'error': 'password must be at least 8 characters'}), 400
+
+        has_email = bool(data.get('email'))
+        has_phone = bool(data.get('phone_number'))
+
+        if not has_email and not has_phone:
+            return jsonify({'error': 'Either email or phone_number is required'}), 400
+
+        if has_email and not data.get('email_password'):
+            return jsonify({'error': 'email_password is required when email is provided'}), 400
+
+        # Verify device exists
+        device = Device.query.filter_by(device_id=data['device_id']).first()
+        if not device:
+            return jsonify({'error': f'Device {data["device_id"]} not found'}), 404
+
+        job = start_creation_job(data)
+        return jsonify({
+            'success': True,
+            'message': 'TikTok account creation started',
+            'task_id': job.task_id,
+        }), 202
+
+    except Exception as e:
+        logger.error(f'create_tiktok_account: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+def get_tiktok_creation_status(task_id: str):
+    """GET /tiktok/accounts/creation-status/<task_id>"""
+    try:
+        from app.utils.tiktok_account_creator import get_job
+        job = get_job(task_id)
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+        return jsonify(job.to_dict())
+    except Exception as e:
+        logger.error(f'get_tiktok_creation_status: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+def list_tiktok_creation_jobs():
+    """GET /tiktok/accounts/creation-jobs"""
+    try:
+        from app.utils.tiktok_account_creator import list_jobs
+        return jsonify({'success': True, 'jobs': list_jobs()})
+    except Exception as e:
+        logger.error(f'list_tiktok_creation_jobs: {e}')
+        return jsonify({'error': str(e)}), 500

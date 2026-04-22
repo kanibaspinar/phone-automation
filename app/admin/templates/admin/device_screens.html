@@ -1,0 +1,325 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Devices — Web Screen{% endblock %}
+
+{% block head %}
+<style>
+    .screen-card {
+        background: #111827;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgb(0 0 0 / .4);
+        display: flex;
+        flex-direction: column;
+    }
+    .screen-card-header {
+        padding: .5rem .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #1f2937;
+        border-bottom: 1px solid #374151;
+        flex-shrink: 0;
+    }
+    .screen-wrap {
+        position: relative;
+        background: #000;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+    }
+    .screen-img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+    .screen-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: .75rem;
+        background: rgba(0,0,0,.7);
+    }
+    .screen-card-footer {
+        padding: .4rem .75rem;
+        background: #1f2937;
+        border-top: 1px solid #374151;
+        display: flex;
+        gap: .5rem;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .btn-sm {
+        display: inline-flex; align-items: center; gap: .35rem;
+        padding: .3rem .6rem; border-radius: .375rem;
+        font-size: .7rem; font-weight: 500; cursor: pointer;
+        border: none; transition: background 150ms;
+    }
+    .btn-sm-green  { background: #16a34a; color: #fff; }
+    .btn-sm-green:hover  { background: #15803d; }
+    .btn-sm-red    { background: #dc2626; color: #fff; }
+    .btn-sm-red:hover    { background: #b91c1c; }
+    .btn-sm-gray   { background: #374151; color: #d1d5db; }
+    .btn-sm-gray:hover   { background: #4b5563; }
+    .btn-sm-blue   { background: #2563eb; color: #fff; }
+    .btn-sm-blue:hover   { background: #1d4ed8; }
+
+    /* loading spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+        width: 32px; height: 32px;
+        border: 3px solid rgba(255,255,255,.15);
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin .8s linear infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i class="fas fa-desktop text-indigo-500"></i>
+            Devices — Web Screen
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Live device screens streamed via <span class="font-medium text-indigo-400">mysc</span>
+            &nbsp;·&nbsp; {{ devices|length }} device(s) registered
+        </p>
+    </div>
+    <div class="flex items-center gap-2">
+        <button onclick="startAll()" class="btn-primary text-xs py-1.5 px-3">
+            <i class="fas fa-play"></i> Start All
+        </button>
+        <button onclick="stopAll()" class="btn-ghost text-xs py-1.5 px-3">
+            <i class="fas fa-stop"></i> Stop All
+        </button>
+    </div>
+</div>
+
+{% if not devices %}
+<div class="card p-12 text-center">
+    <i class="fas fa-mobile-alt text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+    <p class="text-gray-500 dark:text-gray-400 text-sm">No devices registered. Add devices first.</p>
+    <a href="{{ url_for('admin.devices') }}" class="btn-primary inline-flex mt-4 text-xs py-1.5 px-4">
+        <i class="fas fa-arrow-right"></i> Go to Devices
+    </a>
+</div>
+{% else %}
+
+<!-- Device Grid -->
+<div id="device-grid" class="grid gap-4"
+     style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+
+    {% for device in devices %}
+    <div class="screen-card" id="card-{{ device.device_id | replace(':', '-') }}">
+
+        <!-- Card header -->
+        <div class="screen-card-header">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2 h-2 rounded-full flex-shrink-0
+                    {% if device.status == 'connected' %}bg-green-500
+                    {% else %}bg-gray-500{% endif %}"></span>
+                <span class="text-white text-xs font-semibold truncate">
+                    {{ device.device_name or device.device_id }}
+                </span>
+            </div>
+            <span class="text-gray-400 text-xs font-mono ml-2 flex-shrink-0">
+                {{ device.device_id }}
+            </span>
+        </div>
+
+        <!-- Screen area -->
+        <div class="screen-wrap" style="height: 420px;">
+            <!-- Placeholder overlay (shown until stream starts) -->
+            <div class="screen-overlay" id="overlay-{{ device.device_id | replace(':', '-') }}">
+                <i class="fas fa-desktop text-4xl text-gray-600"></i>
+                <p class="text-gray-400 text-sm">Stream not started</p>
+                <button class="btn-sm btn-sm-green"
+                        onclick="startStream('{{ device.device_id }}')">
+                    <i class="fas fa-play"></i> Start Stream
+                </button>
+            </div>
+            <!-- Live MJPEG img (hidden until started) -->
+            <img class="screen-img" style="display:none;"
+                 id="img-{{ device.device_id | replace(':', '-') }}"
+                 alt="Screen of {{ device.device_id }}">
+        </div>
+
+        <!-- Card footer -->
+        <div class="screen-card-footer">
+            <button class="btn-sm btn-sm-green"
+                    onclick="startStream('{{ device.device_id }}')">
+                <i class="fas fa-play"></i> Start
+            </button>
+            <button class="btn-sm btn-sm-red"
+                    onclick="stopStream('{{ device.device_id }}')">
+                <i class="fas fa-stop"></i> Stop
+            </button>
+            <button class="btn-sm btn-sm-blue"
+                    onclick="openFullscreen('{{ device.device_id }}')">
+                <i class="fas fa-expand"></i> Full
+            </button>
+            <button class="btn-sm btn-sm-gray"
+                    onclick="window.open('/admin/devices/show-screen/{{ device.device_id }}', '_blank')"
+                    title="Open scrcpy desktop window">
+                <i class="fas fa-desktop"></i> scrcpy
+            </button>
+        </div>
+
+    </div>
+    {% endfor %}
+
+</div>
+{% endif %}
+
+<!-- Fullscreen modal -->
+<div id="fs-modal" style="display:none;"
+     class="fixed inset-0 z-50 bg-black flex flex-col">
+    <div class="flex items-center justify-between px-4 py-2 bg-gray-900">
+        <span id="fs-title" class="text-white text-sm font-medium"></span>
+        <div class="flex items-center gap-2">
+            <button onclick="rotateFullscreen()"
+                    class="btn-sm btn-sm-gray">
+                <i class="fas fa-sync-alt"></i> Rotate
+            </button>
+            <button onclick="closeFullscreen()"
+                    class="btn-sm btn-sm-red">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+    <div class="flex-1 flex items-center justify-center overflow-hidden p-2">
+        <img id="fs-img" class="max-h-full max-w-full object-contain" alt="">
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const activeStreams = {};   // device_id -> img element src (to know what's streaming)
+
+function safeId(deviceId) {
+    return deviceId.replace(/:/g, '-');
+}
+
+function startStream(deviceId) {
+    const id   = safeId(deviceId);
+    const img  = document.getElementById('img-' + id);
+    const overlay = document.getElementById('overlay-' + id);
+    if (!img) return;
+
+    // Show a loading spinner while the adapter initialises
+    overlay.innerHTML = `
+        <div class="spinner"></div>
+        <p class="text-gray-400 text-xs mt-1">Connecting via mysc…</p>
+    `;
+    overlay.style.display = 'flex';
+
+    const streamUrl = '/admin/devices/screens/' + encodeURIComponent(deviceId) + '/stream';
+
+    img.onerror = function () {
+        overlay.innerHTML = `
+            <i class="fas fa-exclamation-triangle text-3xl text-red-500"></i>
+            <p class="text-red-400 text-xs">Stream failed. Device may be offline.</p>
+            <button class="btn-sm btn-sm-green" onclick="startStream('${deviceId}')">
+                <i class="fas fa-redo"></i> Retry
+            </button>`;
+        overlay.style.display = 'flex';
+        img.style.display = 'none';
+    };
+
+    img.onload = function () {
+        overlay.style.display = 'none';
+        img.style.display = 'block';
+        activeStreams[deviceId] = streamUrl;
+        showToast('Stream started: ' + deviceId, 'success');
+    };
+
+    img.src = streamUrl + '?t=' + Date.now();
+}
+
+function stopStream(deviceId) {
+    const id  = safeId(deviceId);
+    const img = document.getElementById('img-' + id);
+    const overlay = document.getElementById('overlay-' + id);
+    if (!img) return;
+
+    img.src = '';
+    img.style.display = 'none';
+    delete activeStreams[deviceId];
+
+    overlay.innerHTML = `
+        <i class="fas fa-desktop text-4xl text-gray-600"></i>
+        <p class="text-gray-400 text-sm">Stream stopped</p>
+        <button class="btn-sm btn-sm-green" onclick="startStream('${deviceId}')">
+            <i class="fas fa-play"></i> Start Stream
+        </button>`;
+    overlay.style.display = 'flex';
+
+    // Ask server to release the adapter
+    fetch('/admin/devices/screens/' + encodeURIComponent(deviceId) + '/release', {
+        method: 'POST'
+    }).catch(() => {});
+}
+
+function startAll() {
+    document.querySelectorAll('[id^="img-"]').forEach(img => {
+        const id = img.id.replace('img-', '').replace(/-/g, ':');
+        startStream(id);
+    });
+}
+
+function stopAll() {
+    document.querySelectorAll('[id^="img-"]').forEach(img => {
+        const id = img.id.replace('img-', '').replace(/-/g, ':');
+        stopStream(id);
+    });
+}
+
+// ── Fullscreen modal ──────────────────────────────────────────────────────────
+let _fsRotation = 0;
+
+function openFullscreen(deviceId) {
+    const id  = safeId(deviceId);
+    const img = document.getElementById('img-' + id);
+    const modal = document.getElementById('fs-modal');
+    const fsImg = document.getElementById('fs-img');
+    const fsTitle = document.getElementById('fs-title');
+
+    const streamUrl = '/admin/devices/screens/' + encodeURIComponent(deviceId) + '/stream';
+    fsImg.src = streamUrl + '?fs=1&t=' + Date.now();
+    fsTitle.textContent = deviceId;
+    _fsRotation = 0;
+    fsImg.style.transform = '';
+    modal.style.display = 'flex';
+}
+
+function closeFullscreen() {
+    const modal = document.getElementById('fs-modal');
+    const fsImg = document.getElementById('fs-img');
+    fsImg.src = '';
+    modal.style.display = 'none';
+}
+
+function rotateFullscreen() {
+    _fsRotation = (_fsRotation + 90) % 360;
+    document.getElementById('fs-img').style.transform =
+        `rotate(${_fsRotation}deg)`;
+}
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeFullscreen();
+});
+</script>
+{% endblock %}

@@ -17,7 +17,7 @@ def recreate_db(app):
     """Recreate all database tables"""
     with app.app_context():
         # Ensure all models are imported so SQLAlchemy sees them
-        from app.models import device, instagram_account, tiktok_account  # noqa: F401
+        from app.models import device, instagram_account, tiktok_account, proxy  # noqa: F401
         db.create_all()
 
 def create_app(config_class=Config):

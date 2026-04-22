@@ -781,3 +781,128 @@ def upload_media():
     except Exception as e:
         logger.error(f"Error uploading media: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Instagram account CREATION (uiautomator + IMAP)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@bp.route('/instagram/accounts/create-new', methods=['POST'])
+def create_instagram_account():
+    """
+    Start a new Instagram account creation job on a connected device.
+
+    Required body fields:
+        device_id   (str)  – ADB serial of the target device
+        username    (str)  – desired Instagram username
+        password    (str)  – account password (min 6 chars)
+
+    At least one contact method is required:
+        email           (str)  – registration email address
+        email_password  (str)  – password used to log in to that email (IMAP)
+    OR:
+        phone_number    (str)  – phone number for SMS registration
+
+    Optional:
+        full_name    (str)  – display name (defaults to username)
+        birthday     (str)  – YYYY-MM-DD (defaults to 1995-06-15)
+        imap_server  (str)  – override IMAP server (auto-detected otherwise)
+        imap_port    (int)  – IMAP port (default 993)
+
+    Returns 202 immediately with task_id.  Poll
+    GET /api/instagram/accounts/creation-status/<task_id> for progress.
+    """
+    try:
+        from app.utils.instagram_account_creator import start_creation_job
+        import adbutils
+
+        data = request.get_json(silent=True) or {}
+
+        # ── Validate required fields ──────────────────────────────────────
+        required = ['device_id', 'username', 'password']
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
+
+        if not data.get('email') and not data.get('phone_number'):
+            return jsonify({'error': 'Either email+email_password or phone_number is required'}), 400
+
+        if data.get('email') and not data.get('email_password'):
+            return jsonify({'error': 'email_password is required when email is provided'}), 400
+
+        if len(data['password']) < 6:
+            return jsonify({'error': 'password must be at least 6 characters'}), 400
+
+        # ── Verify device is known ────────────────────────────────────────
+        device_id = data['device_id'].strip()
+        try:
+            connected = [d.serial for d in adbutils.adb.device_list()]
+        except Exception:
+            connected = []
+
+        if connected and device_id not in connected:
+            return jsonify({
+                'error': f'Device {device_id!r} not found in ADB. '
+                         f'Connected devices: {connected}'
+            }), 400
+
+        # ── Submit job ────────────────────────────────────────────────────
+        params = {
+            'device_id':      device_id,
+            'username':       data['username'].strip(),
+            'password':       data['password'],
+            'email':          data.get('email', '').strip() or None,
+            'email_password': data.get('email_password') or None,
+            'phone_number':   data.get('phone_number', '').strip() or None,
+            'full_name':      data.get('full_name', '').strip() or None,
+            'birthday':       data.get('birthday', '1995-06-15'),
+            'imap_server':    data.get('imap_server') or None,
+            'imap_port':      int(data.get('imap_port', 993)),
+        }
+
+        job = start_creation_job(params)
+        logger.info("Account creation job started: %s for %s on %s",
+                    job.task_id, params['username'], device_id)
+
+        return jsonify({
+            'success': True,
+            'message': 'Account creation job started',
+            'task_id': job.task_id,
+            'status_url': f'/api/instagram/accounts/creation-status/{job.task_id}',
+        }), 202
+
+    except Exception as exc:
+        logger.exception("Error starting account creation job")
+        return jsonify({'error': str(exc)}), 500
+
+
+@bp.route('/instagram/accounts/creation-status/<task_id>', methods=['GET'])
+def get_creation_status(task_id):
+    """
+    Poll the status of an account creation job.
+
+    Status values:
+        pending    – waiting to start
+        running    – automation in progress (check `step` for current action)
+        completed  – account created; see `result` for details
+        failed     – see `error` for reason
+    """
+    try:
+        from app.utils.instagram_account_creator import get_job
+        job = get_job(task_id)
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+        return jsonify({'success': True, 'job': job.to_dict()})
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
+
+@bp.route('/instagram/accounts/creation-jobs', methods=['GET'])
+def list_creation_jobs():
+    """List all account creation jobs (most recent first)."""
+    try:
+        from app.utils.instagram_account_creator import list_jobs
+        jobs = sorted(list_jobs(), key=lambda j: j['created_at'], reverse=True)
+        return jsonify({'success': True, 'jobs': jobs, 'total': len(jobs)})
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500

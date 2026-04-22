@@ -1,0 +1,699 @@
+{% extends "admin/base.html" %}
+{% block title %}Account Creator{% endblock %}
+
+{% block head %}
+<style>
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .creator-grid { display: grid; grid-template-columns: 260px 1fr; gap: 1.25rem; }
+    @media (max-width: 900px) { .creator-grid { grid-template-columns: 1fr; } }
+
+    /* ── Device card ────────────────────────────────────────────────── */
+    .device-item {
+        display: flex; align-items: center; gap: .625rem;
+        padding: .5rem .75rem; border-radius: .5rem; cursor: pointer;
+        transition: background 120ms;
+    }
+    .device-item:hover { background: #f9fafb; }
+    html.dark .device-item:hover { background: #374151; }
+    .device-item.selected { background: #eef2ff; }
+    html.dark .device-item.selected { background: rgba(99,102,241,.15); }
+
+    .status-dot {
+        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-connected    { background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
+    .dot-disconnected { background: #6b7280; }
+
+    /* ── Account table ──────────────────────────────────────────────── */
+    .acct-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .acct-table th {
+        padding: .5rem .6rem; text-align: left;
+        background: #f9fafb; font-size: .7rem; font-weight: 600;
+        color: #6b7280; text-transform: uppercase; letter-spacing: .04em;
+        position: sticky; top: 0; z-index: 1;
+    }
+    html.dark .acct-table th { background: #1f2937; color: #9ca3af; }
+    .acct-table td { padding: .35rem .4rem; border-top: 1px solid #f3f4f6; vertical-align: middle; }
+    html.dark .acct-table td { border-color: #374151; }
+    .acct-table tr:hover td { background: rgba(0,0,0,.015); }
+    html.dark .acct-table tr:hover td { background: rgba(255,255,255,.025); }
+
+    .cell-input {
+        width: 100%; padding: .3rem .45rem; border-radius: .375rem;
+        font-size: .78rem; border: 1px solid #e5e7eb; background: transparent;
+        color: #111827; transition: border-color 120ms;
+    }
+    html.dark .cell-input { border-color: #4b5563; color: #f3f4f6; background: transparent; }
+    .cell-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.2); }
+
+    .cell-select {
+        width: 100%; padding: .3rem .35rem; border-radius: .375rem;
+        font-size: .75rem; border: 1px solid #e5e7eb; background: white;
+        color: #111827;
+    }
+    html.dark .cell-select { border-color: #4b5563; background: #374151; color: #f3f4f6; }
+
+    /* ── Job monitor table ───────────────────────────────────────────── */
+    .monitor-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .monitor-table th {
+        padding: .45rem .6rem; text-align: left;
+        background: #f9fafb; font-size: .7rem; font-weight: 600;
+        color: #6b7280; text-transform: uppercase; letter-spacing: .04em;
+    }
+    html.dark .monitor-table th { background: #1f2937; color: #9ca3af; }
+    .monitor-table td { padding: .45rem .6rem; border-top: 1px solid #f3f4f6; font-size: .8rem; color: #374151; }
+    html.dark .monitor-table td { border-color: #374151; color: #d1d5db; }
+
+    /* ── Status pills ────────────────────────────────────────────────── */
+    .pill {
+        display: inline-flex; align-items: center; gap: .3rem;
+        padding: .15rem .55rem; border-radius: 9999px;
+        font-size: .68rem; font-weight: 600; white-space: nowrap;
+    }
+    .pill-pending   { background: #fef3c7; color: #b45309; }
+    .pill-running   { background: #dbeafe; color: #1d4ed8; }
+    .pill-completed { background: #dcfce7; color: #15803d; }
+    .pill-failed    { background: #fee2e2; color: #b91c1c; }
+    html.dark .pill-pending   { background: rgba(180,83,9,.2);   color: #fbbf24; }
+    html.dark .pill-running   { background: rgba(29,78,216,.2);  color: #60a5fa; }
+    html.dark .pill-completed { background: rgba(21,128,61,.2);  color: #4ade80; }
+    html.dark .pill-failed    { background: rgba(185,28,28,.2);  color: #f87171; }
+
+    /* ── Progress bar ─────────────────────────────────────────────────── */
+    .progress-bar {
+        height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; margin-top: 2px;
+    }
+    .progress-fill { height: 100%; border-radius: 2px; transition: width .4s; background: #6366f1; }
+
+    /* ── Platform toggle ─────────────────────────────────────────────────── */
+    .platform-btn { color: #6b7280; }
+    .platform-btn:hover { background: #f3f4f6; color: #111827; }
+    .active-plat { background: #4f46e5; color: #fff !important; }
+    .active-plat:hover { background: #4338ca !important; }
+    html.dark .platform-btn { color: #9ca3af; }
+    html.dark .platform-btn:hover { background: #374151; color: #f9fafb; }
+
+    /* ── Misc ─────────────────────────────────────────────────────────── */
+    .row-num { color: #9ca3af; font-size: .7rem; text-align: center; user-select: none; width: 28px; }
+    .del-row { cursor: pointer; color: #9ca3af; padding: .2rem .3rem; border-radius: .25rem; transition: color 120ms; }
+    .del-row:hover { color: #dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Account Creator</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Select platform and devices, build your account list, then dispatch all creation jobs in parallel.
+        </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+        <!-- Platform toggle -->
+        <div class="flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-600 p-1 bg-white dark:bg-gray-800">
+            <button id="plat-ig" onclick="setPlatform('instagram')"
+                    class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors platform-btn active-plat">
+                <i class="fab fa-instagram mr-1"></i> Instagram
+            </button>
+            <button id="plat-tt" onclick="setPlatform('tiktok')"
+                    class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors platform-btn">
+                <i class="fab fa-tiktok mr-1"></i> TikTok
+            </button>
+        </div>
+        <label class="btn-ghost text-sm cursor-pointer" title="Import CSV">
+            <i class="fas fa-file-csv"></i> Import CSV
+            <input type="file" id="csv-file" accept=".csv,.txt" class="hidden" onchange="importCSV(this)">
+        </label>
+        <a href="#" onclick="downloadTemplate()" class="btn-ghost text-sm">
+            <i class="fas fa-download"></i> CSV Template
+        </a>
+    </div>
+</div>
+
+<div class="creator-grid">
+
+    <!-- ── LEFT: Device picker ──────────────────────────────────────────── -->
+    <div>
+        <div class="card p-4 mb-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <i class="fas fa-mobile-alt mr-1 text-indigo-500"></i> Devices
+                </h3>
+                <div class="flex gap-1">
+                    <button onclick="selectAllConnected()" class="btn-ghost py-1 px-2 text-xs">All</button>
+                    <button onclick="deselectAll()" class="btn-ghost py-1 px-2 text-xs">None</button>
+                </div>
+            </div>
+            <div id="device-list" class="space-y-1">
+                {% for dev in devices %}
+                <div class="device-item" data-id="{{ dev.device_id }}"
+                     data-connected="{{ 'true' if dev.status == 'connected' else 'false' }}"
+                     onclick="toggleDevice(this)">
+                    <input type="checkbox" class="dev-chk rounded"
+                           {% if dev.status == 'connected' %}checked{% endif %}
+                           onclick="event.stopPropagation(); syncItem(this)">
+                    <span class="status-dot {{ 'dot-connected' if dev.status == 'connected' else 'dot-disconnected' }}"></span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">
+                            {{ dev.device_name or dev.device_id }}
+                        </p>
+                        <p class="text-xs text-gray-400 truncate">{{ dev.device_id }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-xs text-gray-400 px-2 py-3 text-center">No devices found. Add devices first.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Assignment mode -->
+        <div class="card p-4">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                <i class="fas fa-random mr-1 text-indigo-500"></i> Assignment
+            </h3>
+            <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer mb-2">
+                <input type="radio" name="assign-mode" value="roundrobin" checked>
+                Round-robin across selected devices
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <input type="radio" name="assign-mode" value="manual">
+                Manual — pick per row
+            </label>
+            <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 space-y-1">
+                <div id="sel-count">0 devices selected</div>
+                <div id="row-count">0 accounts queued</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: Account list + actions ────────────────────────────────── -->
+    <div class="space-y-4">
+
+        <!-- Toolbar -->
+        <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="addRow()" class="btn-primary text-sm">
+                <i class="fas fa-plus"></i> Add Row
+            </button>
+            <button onclick="clearRows()" class="btn-ghost text-sm">
+                <i class="fas fa-trash"></i> Clear All
+            </button>
+            <div class="flex-1"></div>
+            <button id="dispatch-btn" onclick="dispatchJobs()"
+                    class="btn-primary text-sm bg-green-600 hover:bg-green-700"
+                    style="background:#16a34a;">
+                <i class="fas fa-play"></i> <span id="dispatch-label">Dispatch Jobs</span>
+            </button>
+        </div>
+
+        <!-- Account table -->
+        <div class="card overflow-x-auto">
+            <table class="acct-table" id="acct-table">
+                <thead>
+                    <tr>
+                        <th class="row-num">#</th>
+                        <th>Username <span class="text-red-400">*</span></th>
+                        <th>Password <span class="text-red-400">*</span></th>
+                        <th>Email</th>
+                        <th>Email Password</th>
+                        <th>Full Name</th>
+                        <th>Birthday</th>
+                        <th>Phone</th>
+                        <th>IMAP Server</th>
+                        <th>IMAP Port</th>
+                        <th id="device-col-header">Device</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="acct-body">
+                    <!-- rows added by JS -->
+                </tbody>
+            </table>
+            <div id="empty-hint" class="py-10 text-center text-sm text-gray-400">
+                <i class="fas fa-plus-circle text-2xl mb-2 block text-gray-300"></i>
+                Click <strong>Add Row</strong> or <strong>Import CSV</strong> to start
+            </div>
+        </div>
+
+        <!-- ── Job monitor ──────────────────────────────────────────────── -->
+        <div id="monitor-section" class="hidden">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <i class="fas fa-tasks mr-1 text-indigo-500"></i>
+                    Live Job Monitor
+                    <span id="monitor-badge" class="ml-2 pill pill-running text-xs">polling…</span>
+                </h3>
+                <button onclick="stopPolling()" class="btn-ghost py-1 px-2 text-xs">
+                    <i class="fas fa-stop"></i> Stop polling
+                </button>
+            </div>
+            <div class="card overflow-x-auto">
+                <table class="monitor-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Device</th>
+                            <th>Status</th>
+                            <th>Current Step</th>
+                            <th>Started</th>
+                            <th>Finished</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monitor-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Platform ────────────────────────────────────────────────────────────────
+let currentPlatform = 'instagram';
+
+function setPlatform(p) {
+    currentPlatform = p;
+    document.getElementById('plat-ig').classList.toggle('active-plat', p === 'instagram');
+    document.getElementById('plat-tt').classList.toggle('active-plat', p === 'tiktok');
+    clearRows();
+    updateCounts();
+}
+
+function platformEndpoint() {
+    return currentPlatform === 'tiktok'
+        ? '/api/tiktok/accounts/create-new'
+        : '/api/instagram/accounts/create-new';
+}
+
+function platformStatusEndpoint(task_id) {
+    return currentPlatform === 'tiktok'
+        ? `/api/tiktok/accounts/creation-status/${task_id}`
+        : `/api/instagram/accounts/creation-status/${task_id}`;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+const DEVICES = [
+    {% for dev in devices %}
+    { id: "{{ dev.device_id }}", name: "{{ dev.device_name or dev.device_id }}", connected: {{ 'true' if dev.status == 'connected' else 'false' }} },
+    {% endfor %}
+];
+
+let rowCounter = 0;
+let dispatchedTaskIds = [];   // task_ids we care about
+let pollTimer = null;
+
+// ── Device selection ────────────────────────────────────────────────────────
+function toggleDevice(item) {
+    const chk = item.querySelector('.dev-chk');
+    chk.checked = !chk.checked;
+    item.classList.toggle('selected', chk.checked);
+    updateCounts();
+    refreshDeviceDropdowns();
+}
+
+function syncItem(chk) {
+    chk.closest('.device-item').classList.toggle('selected', chk.checked);
+    updateCounts();
+    refreshDeviceDropdowns();
+}
+
+function selectAllConnected() {
+    document.querySelectorAll('.device-item[data-connected="true"]').forEach(item => {
+        item.querySelector('.dev-chk').checked = true;
+        item.classList.add('selected');
+    });
+    updateCounts(); refreshDeviceDropdowns();
+}
+
+function deselectAll() {
+    document.querySelectorAll('.device-item').forEach(item => {
+        item.querySelector('.dev-chk').checked = false;
+        item.classList.remove('selected');
+    });
+    updateCounts(); refreshDeviceDropdowns();
+}
+
+function getSelectedDevices() {
+    return [...document.querySelectorAll('.device-item')]
+        .filter(i => i.querySelector('.dev-chk').checked)
+        .map(i => ({ id: i.dataset.id, name: i.querySelector('p').textContent.trim() }));
+}
+
+function updateCounts() {
+    const sel = getSelectedDevices().length;
+    const rows = document.querySelectorAll('#acct-body tr').length;
+    document.getElementById('sel-count').textContent = sel + ' device' + (sel !== 1 ? 's' : '') + ' selected';
+    document.getElementById('row-count').textContent = rows + ' account' + (rows !== 1 ? 's' : '') + ' queued';
+    document.getElementById('dispatch-label').textContent = 'Dispatch ' + rows + ' Job' + (rows !== 1 ? 's' : '');
+}
+
+// ── Assignment mode ─────────────────────────────────────────────────────────
+function isManual() {
+    return document.querySelector('input[name="assign-mode"]:checked').value === 'manual';
+}
+
+document.querySelectorAll('input[name="assign-mode"]').forEach(r =>
+    r.addEventListener('change', () => {
+        document.getElementById('device-col-header').textContent = isManual() ? 'Device' : 'Device (auto)';
+        document.querySelectorAll('.dev-select').forEach(sel => {
+            sel.disabled = !isManual();
+            sel.style.opacity = isManual() ? '1' : '.4';
+        });
+    })
+);
+
+// ── Row management ──────────────────────────────────────────────────────────
+function addRow(data) {
+    data = data || {};
+    rowCounter++;
+    const tbody = document.getElementById('acct-body');
+    const hint = document.getElementById('empty-hint');
+    hint.classList.add('hidden');
+
+    const tr = document.createElement('tr');
+    tr.dataset.rowId = rowCounter;
+    tr.innerHTML = `
+        <td class="row-num">${tbody.children.length + 1}</td>
+        <td><input class="cell-input" placeholder="username" value="${esc(data.username||'')}" data-field="username"></td>
+        <td><input class="cell-input" type="text" placeholder="password" value="${esc(data.password||'')}" data-field="password"></td>
+        <td><input class="cell-input" placeholder="email@example.com" value="${esc(data.email||'')}" data-field="email"></td>
+        <td><input class="cell-input" type="text" placeholder="email password" value="${esc(data.email_password||'')}" data-field="email_password"></td>
+        <td><input class="cell-input" placeholder="Full Name" value="${esc(data.full_name||'')}" data-field="full_name"></td>
+        <td><input class="cell-input" placeholder="1995-06-15" value="${esc(data.birthday||'')}" data-field="birthday"></td>
+        <td><input class="cell-input" placeholder="+1…" value="${esc(data.phone_number||'')}" data-field="phone_number"></td>
+        <td><input class="cell-input" placeholder="imap.gmail.com" value="${esc(data.imap_server||'')}" data-field="imap_server"></td>
+        <td><input class="cell-input" placeholder="993" style="width:62px" value="${esc(data.imap_port||'')}" data-field="imap_port"></td>
+        <td><select class="cell-select dev-select" ${isManual() ? '' : 'disabled style="opacity:.4"'} data-field="device_id">
+            <option value="">— auto —</option>
+            ${DEVICES.map(d => `<option value="${esc(d.id)}" ${data.device_id===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}
+        </select></td>
+        <td><span class="del-row" onclick="deleteRow(this)"><i class="fas fa-times"></i></span></td>
+    `;
+    tbody.appendChild(tr);
+    updateCounts();
+    renumberRows();
+}
+
+function deleteRow(btn) {
+    btn.closest('tr').remove();
+    renumberRows();
+    updateCounts();
+    if (!document.querySelector('#acct-body tr')) {
+        document.getElementById('empty-hint').classList.remove('hidden');
+    }
+}
+
+function clearRows() {
+    document.getElementById('acct-body').innerHTML = '';
+    document.getElementById('empty-hint').classList.remove('hidden');
+    rowCounter = 0;
+    updateCounts();
+}
+
+function renumberRows() {
+    document.querySelectorAll('#acct-body tr').forEach((tr, i) => {
+        tr.querySelector('.row-num').textContent = i + 1;
+    });
+}
+
+function refreshDeviceDropdowns() {
+    const selected = getSelectedDevices();
+    document.querySelectorAll('.dev-select').forEach(sel => {
+        const current = sel.value;
+        sel.innerHTML = '<option value="">— auto —</option>' +
+            DEVICES.map(d => `<option value="${esc(d.id)}" ${current===d.id?'selected':''}>${esc(d.name)}</option>`).join('');
+    });
+}
+
+// ── Read row data ────────────────────────────────────────────────────────────
+function getRowData(tr) {
+    const d = {};
+    tr.querySelectorAll('[data-field]').forEach(el => { d[el.dataset.field] = el.value.trim(); });
+    return d;
+}
+
+// ── Dispatch ────────────────────────────────────────────────────────────────
+async function dispatchJobs() {
+    const rows = [...document.querySelectorAll('#acct-body tr')];
+    if (!rows.length) { showToast('Add at least one account row', 'error'); return; }
+
+    const selectedDevices = getSelectedDevices();
+    if (!selectedDevices.length) { showToast('Select at least one device', 'error'); return; }
+
+    // Validate rows
+    for (let i = 0; i < rows.length; i++) {
+        const d = getRowData(rows[i]);
+        if (!d.username) { showToast(`Row ${i+1}: username is required`, 'error'); return; }
+        if (!d.password || d.password.length < 6) { showToast(`Row ${i+1}: password must be ≥6 chars`, 'error'); return; }
+        if (!d.email && !d.phone_number) { showToast(`Row ${i+1}: email or phone required`, 'error'); return; }
+        if (d.email && !d.email_password) { showToast(`Row ${i+1}: email_password required when email is set`, 'error'); return; }
+    }
+
+    const btn = document.getElementById('dispatch-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dispatching…';
+
+    dispatchedTaskIds = [];
+    let rrIndex = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+        const data = getRowData(rows[i]);
+
+        // Resolve device
+        if (!data.device_id) {
+            data.device_id = selectedDevices[rrIndex % selectedDevices.length].id;
+            rrIndex++;
+        }
+
+        // Remove empty optional fields
+        ['email','email_password','phone_number','full_name','birthday','imap_server','imap_port'].forEach(k => {
+            if (!data[k]) delete data[k];
+        });
+
+        try {
+            const resp = await fetch(platformEndpoint(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            const json = await resp.json();
+            if (json.task_id) {
+                dispatchedTaskIds.push({ task_id: json.task_id, username: data.username, device_id: data.device_id });
+            } else {
+                showToast(`Row ${i+1} error: ${json.error || 'unknown'}`, 'error');
+            }
+        } catch (err) {
+            showToast(`Row ${i+1} network error: ${err}`, 'error');
+        }
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> <span id="dispatch-label">Dispatch ' + rows.length + ' Job' + (rows.length !== 1 ? 's' : '') + '</span>';
+
+    if (dispatchedTaskIds.length) {
+        showToast(`${dispatchedTaskIds.length} job(s) dispatched`, 'success');
+        document.getElementById('monitor-section').classList.remove('hidden');
+        renderMonitorRows();
+        startPolling();
+    }
+}
+
+// ── Monitor ──────────────────────────────────────────────────────────────────
+function renderMonitorRows() {
+    const tbody = document.getElementById('monitor-body');
+    tbody.innerHTML = '';
+    dispatchedTaskIds.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.id = 'job-' + item.task_id;
+        tr.innerHTML = `
+            <td class="font-medium text-gray-700 dark:text-gray-200">${esc(item.username)}</td>
+            <td class="text-xs text-gray-400">${esc(item.device_id)}</td>
+            <td><span class="pill pill-pending">pending</span></td>
+            <td class="text-gray-500">—<div class="progress-bar hidden"><div class="progress-fill" style="width:0%"></div></div></td>
+            <td class="text-xs text-gray-400">—</td>
+            <td class="text-xs text-gray-400">—</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+const STEP_PROGRESS = {
+    // shared
+    'Queued': 2,
+    'Connecting to device': 5,
+    'Clearing app data': 98,
+    'Done': 100,
+    'Failed': 100,
+    // Instagram
+    'Opening fresh Instagram': 10,
+    'Navigating to signup': 20,
+    'Selecting contact method': 25,
+    'Entering email': 30,
+    'Entering phone': 30,
+    'Waiting for OTP email (up to 90 s)': 40,
+    'Retrying OTP fetch': 50,
+    'Entering OTP': 55,
+    'Verifying OTP': 55,
+    'Entering birthday': 65,
+    'Pushing past birthday screen': 67,
+    'Entering name': 72,
+    'Pushing past name screen': 74,
+    'Entering password': 78,
+    'Setting username': 84,
+    'Agreeing to Instagram terms': 90,
+    'Retrying agree tap': 90,
+    'Dismissing post-signup screen': 94,
+    'Reached home — done': 98,
+    // TikTok
+    'Opening fresh TikTok': 10,
+    'Accepting terms': 15,
+    'Skipping interests': 20,
+    'Dismissing privacy update': 22,
+    'Tapping Profile tab': 28,
+    'Tapping Sign up': 32,
+    'Selecting phone/email signup': 36,
+    'Selecting email tab': 40,
+    'Selecting phone tab': 40,
+    'Entering email': 44,
+    'Entering phone': 44,
+    'Entering birthday': 55,
+    'Verifying OTP': 65,
+    'Entering OTP': 65,
+    'Entering name': 72,
+    'Setting username': 80,
+    'Entering password': 87,
+    'Dismissing post-signup': 93,
+};
+
+function stepPercent(step) {
+    if (!step) return 0;
+    for (const [key, val] of Object.entries(STEP_PROGRESS)) {
+        if (step.startsWith(key)) return val;
+    }
+    return 10;
+}
+
+async function pollJobs() {
+    if (!dispatchedTaskIds.length) return;
+
+    const ids = dispatchedTaskIds.map(i => i.task_id);
+    let allDone = true;
+
+    for (const item of dispatchedTaskIds) {
+        try {
+            const resp = await fetch(platformStatusEndpoint(item.task_id));
+            if (!resp.ok) continue;
+            const job = await resp.json();
+            updateMonitorRow(item, job);
+            if (job.status === 'pending' || job.status === 'running') allDone = false;
+        } catch { allDone = false; }
+    }
+
+    if (allDone) {
+        const badge = document.getElementById('monitor-badge');
+        badge.textContent = 'all done';
+        badge.className = 'ml-2 pill pill-completed text-xs';
+        stopPolling();
+    }
+}
+
+function updateMonitorRow(item, job) {
+    const tr = document.getElementById('job-' + item.task_id);
+    if (!tr) return;
+    const cells = tr.querySelectorAll('td');
+
+    // status pill
+    const pill = cells[2].querySelector('.pill') || cells[2];
+    const pillClass = { pending:'pill-pending', running:'pill-running', completed:'pill-completed', failed:'pill-failed' }[job.status] || 'pill-pending';
+    cells[2].innerHTML = `<span class="pill ${pillClass}">${job.status}</span>`;
+
+    // step + progress bar
+    const pct = stepPercent(job.step);
+    cells[3].innerHTML = `<span class="text-xs">${esc(job.step || '—')}</span>
+        <div class="progress-bar mt-1"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+
+    // dates
+    cells[4].textContent = job.created_at ? formatDt(job.created_at) : '—';
+    cells[5].textContent = job.finished_at ? formatDt(job.finished_at) : '—';
+
+    if (job.status === 'failed' && job.error) {
+        cells[3].innerHTML += `<div class="text-xs text-red-500 mt-1">${esc(job.error)}</div>`;
+    }
+}
+
+function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(pollJobs, 3000);
+    pollJobs();
+}
+
+function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    const badge = document.getElementById('monitor-badge');
+    if (badge) { badge.textContent = 'stopped'; badge.className = 'ml-2 pill pill-pending text-xs'; }
+}
+
+// ── CSV import ───────────────────────────────────────────────────────────────
+// Expected header: username,password,email,email_password,full_name,birthday,phone_number,imap_server,imap_port
+function importCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+        if (!lines.length) return;
+
+        // Detect header row
+        const firstLower = lines[0].toLowerCase();
+        const hasHeader = firstLower.includes('username') || firstLower.includes('password');
+        const dataLines = hasHeader ? lines.slice(1) : lines;
+        const headers = hasHeader
+            ? lines[0].split(',').map(h => h.trim().toLowerCase())
+            : ['username','password','email','email_password','full_name','birthday','phone_number','imap_server','imap_port'];
+
+        let imported = 0;
+        dataLines.forEach(line => {
+            const vals = line.split(',').map(v => v.trim());
+            if (!vals[0]) return;
+            const row = {};
+            headers.forEach((h, i) => { row[h] = vals[i] || ''; });
+            addRow(row);
+            imported++;
+        });
+        showToast(`${imported} row(s) imported`, 'success');
+        input.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function downloadTemplate() {
+    const csv = 'username,password,email,email_password,full_name,birthday,phone_number,imap_server,imap_port\n' +
+                'myuser1,Pass123!,user1@gmail.com,gmailapppass,My User One,1995-06-15,,,\n' +
+                'myuser2,Pass456!,user2@outlook.com,outlookpass,My User Two,1998-03-22,,,\n';
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'ig_creator_template.csv';
+    a.click();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDt(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    // Mark initially-checked devices as selected
+    document.querySelectorAll('.dev-chk:checked').forEach(chk => {
+        chk.closest('.device-item').classList.add('selected');
+    });
+    updateCounts();
+    addRow();   // start with one empty row
+});
+</script>
+{% endblock %}

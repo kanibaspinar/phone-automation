@@ -1,0 +1,287 @@
+{% extends "admin/base.html" %}
+{% block title %}Proxies{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">Proxy Management</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        proxy6.net proxies — one unique proxy per account creation
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="bulkUnassign()" class="btn-ghost text-xs py-1.5 px-3" id="bulk-unassign-btn">
+        <i class="fas fa-unlink mr-1"></i> Unassign Selected
+      </button>
+      <button onclick="syncProxies()" class="btn-primary" id="sync-btn">
+        <i class="fas fa-sync-alt"></i> Sync from proxy6.net
+      </button>
+    </div>
+  </div>
+
+  <!-- API Key card -->
+  <div class="card p-5">
+    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+      <i class="fas fa-key mr-1 text-indigo-500"></i> proxy6.net API Key
+    </h2>
+    <div class="flex gap-2">
+      <input type="password" id="api-key-input" placeholder="Enter your proxy6.net API key"
+             class="input flex-1" autocomplete="off">
+      <button onclick="saveApiKey()" class="btn-primary whitespace-nowrap">
+        <i class="fas fa-save"></i> Save
+      </button>
+    </div>
+    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+      {% if api_key_set %}
+        <span class="text-green-500"><i class="fas fa-check-circle"></i> API key is configured.</span>
+        Enter a new key above to replace it.
+      {% else %}
+        <span class="text-yellow-500"><i class="fas fa-exclamation-circle"></i> No API key set.</span>
+        Get yours at <a href="https://proxy6.net" target="_blank" class="underline">proxy6.net</a>.
+      {% endif %}
+    </p>
+    <!-- Balance display -->
+    <div id="balance-row" class="hidden mt-3 flex gap-4 text-sm text-gray-600 dark:text-gray-400">
+      <span>Balance: <strong id="balance-val" class="text-gray-900 dark:text-white">—</strong></span>
+      <span>Active proxies: <strong id="proxy-count" class="text-gray-900 dark:text-white">—</strong></span>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    {% set total = proxies | length %}
+    {% set available = proxies | selectattr('status', 'equalto', 'available') | list | length %}
+    {% set in_use = proxies | selectattr('status', 'equalto', 'in_use') | list | length %}
+    {% set expired = proxies | selectattr('is_active', 'equalto', false) | list | length %}
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ total }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Total</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-bold text-green-600">{{ available }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Available</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-bold text-indigo-600">{{ in_use }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">In Use</div>
+    </div>
+    <div class="card p-4 text-center">
+      <div class="text-2xl font-bold text-red-500">{{ expired }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Inactive</div>
+    </div>
+  </div>
+
+  <!-- Proxy table -->
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full" id="proxy-table">
+        <thead>
+          <tr class="border-b border-gray-200 dark:border-gray-700">
+            <th class="th w-8">
+              <input type="checkbox" id="select-all-proxies" onclick="toggleAllProxies(this)"
+                     class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:bg-gray-700">
+            </th>
+            <th class="th">Host : Port</th>
+            <th class="th">Type</th>
+            <th class="th">Country</th>
+            <th class="th">Status</th>
+            <th class="th">Expires</th>
+            <th class="th">Last Used</th>
+            <th class="th">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="proxy-tbody">
+          {% if proxies %}
+            {% for p in proxies %}
+            <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                id="row-{{ p.proxy_id }}">
+              <td class="td">
+                <input type="checkbox" class="proxy-checkbox rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:bg-gray-700"
+                       value="{{ p.proxy_id }}">
+              </td>
+              <td class="td font-mono text-xs">{{ p.host }}:{{ p.port }}</td>
+              <td class="td">
+                <span class="px-2 py-0.5 rounded text-xs font-medium
+                  {% if p.proxy_type == 'socks5' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
+                  {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300{% endif %}">
+                  {{ p.proxy_type | upper }}
+                </span>
+              </td>
+              <td class="td text-xs uppercase">{{ p.country or '—' }}</td>
+              <td class="td">
+                <span class="px-2 py-0.5 rounded text-xs font-medium
+                  {% if p.status == 'available' and p.is_active %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                  {% elif p.status == 'in_use' %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300
+                  {% else %}bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400{% endif %}">
+                  {% if not p.is_active %}Inactive
+                  {% elif p.status == 'in_use' %}In Use
+                  {% else %}Available{% endif %}
+                </span>
+              </td>
+              <td class="td text-xs text-gray-500">
+                {{ p.expires_at.strftime('%Y-%m-%d') if p.expires_at else '—' }}
+              </td>
+              <td class="td text-xs text-gray-500">
+                {{ p.last_used.strftime('%m-%d %H:%M') if p.last_used else '—' }}
+              </td>
+              <td class="td">
+                <div class="flex items-center gap-2">
+                  {% if p.status == 'in_use' %}
+                  <button onclick="unassignProxy('{{ p.proxy_id }}')"
+                          title="Unassign proxy"
+                          class="text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 text-xs">
+                    <i class="fas fa-unlink"></i>
+                  </button>
+                  {% endif %}
+                  <button onclick="deleteProxy('{{ p.proxy_id }}')"
+                          class="text-red-500 hover:text-red-700 text-xs">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr id="empty-row">
+              <td colspan="8" class="td text-center text-gray-400 py-8">
+                No proxies yet. Configure your API key and click <strong>Sync from proxy6.net</strong>.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load balance on page load if key is configured
+{% if api_key_set %}
+loadBalance();
+{% endif %}
+
+function loadBalance() {
+  fetch('/api/proxy/config')
+    .then(r => r.json())
+    .then(data => {
+      if (data.balance && !data.balance.error) {
+        document.getElementById('balance-row').classList.remove('hidden');
+        document.getElementById('balance-val').textContent =
+          (data.balance.balance || '?') + ' ' + (data.balance.currency || '');
+        document.getElementById('proxy-count').textContent = data.balance.count || '0';
+      }
+    })
+    .catch(() => {});
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { showToast('Enter an API key', 'error'); return; }
+  fetch('/api/proxy/config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({api_key: key})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      showToast('API key saved', 'success');
+      document.getElementById('api-key-input').value = '';
+      loadBalance();
+    } else {
+      showToast(d.error || 'Save failed', 'error');
+    }
+  });
+}
+
+function syncProxies() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing…';
+  fetch('/api/proxy/sync', {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync from proxy6.net';
+      if (d.ok) {
+        showToast(`Synced: +${d.added} added, ${d.updated} updated`, 'success');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showToast(d.error || 'Sync failed', 'error');
+      }
+    })
+    .catch(e => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync from proxy6.net';
+      showToast('Request failed', 'error');
+    });
+}
+
+function deleteProxy(proxyId) {
+  if (!confirm('Remove this proxy?')) return;
+  fetch('/api/proxy/' + proxyId, {method: 'DELETE'})
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        const row = document.getElementById('row-' + proxyId);
+        if (row) row.remove();
+        showToast('Proxy removed', 'success');
+      } else {
+        showToast(d.error || 'Delete failed', 'error');
+      }
+    });
+}
+
+function toggleAllProxies(checkbox) {
+  document.querySelectorAll('.proxy-checkbox').forEach(el => el.checked = checkbox.checked);
+}
+
+function getSelectedProxies() {
+  return Array.from(document.querySelectorAll('.proxy-checkbox:checked')).map(cb => cb.value);
+}
+
+function unassignProxy(proxyId) {
+  if (!confirm('Unassign this proxy? The device will lose its proxy route.')) return;
+  fetch('/api/proxy/unassign', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({proxy_id: proxyId})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      showToast('Proxy unassigned', 'success');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(d.error || 'Unassign failed', 'error');
+    }
+  });
+}
+
+function bulkUnassign() {
+  const ids = getSelectedProxies();
+  if (!ids.length) { showToast('Select at least one proxy', 'info'); return; }
+  if (!confirm(`Unassign ${ids.length} proxy(s)? Devices will lose their proxy route.`)) return;
+  fetch('/api/proxy/bulk-unassign', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({proxy_ids: ids})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      showToast(`Unassigned ${d.released} proxy(s)`, 'success');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(d.error || 'Bulk unassign failed', 'error');
+    }
+  });
+}
+</script>
+{% endblock %}

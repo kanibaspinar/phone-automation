@@ -155,6 +155,11 @@
         <a href="#ig-tasks-list">All Tasks</a>
         <a href="#ig-task-status">Task Status</a>
 
+        <div class="group-label">Instagram — Creation</div>
+        <a href="#ig-create-account">Create Account</a>
+        <a href="#ig-creation-status">Creation Status</a>
+        <a href="#ig-creation-jobs">List Creation Jobs</a>
+
         <div class="group-label">TikTok — Accounts</div>
         <a href="#tt-add">Add Account</a>
         <a href="#tt-list">List Accounts</a>
@@ -174,6 +179,21 @@
         <a href="#tt-tasks-list">All Tasks</a>
         <a href="#tt-task-status">Task Status</a>
         <a href="#tt-task-stop">Stop Task</a>
+
+        <div class="group-label">TikTok — Creation</div>
+        <a href="#tt-create-account">Create Account</a>
+        <a href="#tt-creation-status">Creation Status</a>
+        <a href="#tt-creation-jobs">List Creation Jobs</a>
+
+        <div class="group-label">Proxies</div>
+        <a href="#px-config-get">Get Config</a>
+        <a href="#px-config-set">Set API Key</a>
+        <a href="#px-sync">Sync Proxies</a>
+        <a href="#px-list">List Proxies</a>
+        <a href="#px-delete">Delete Proxy</a>
+        <a href="#px-assign">Assign to Device</a>
+        <a href="#px-unassign">Unassign</a>
+        <a href="#px-bulk-unassign">Bulk Unassign</a>
     </aside>
 
     <!-- ── Main content ──────────────────────────────────────────────────── -->
@@ -774,6 +794,174 @@
         </div>
 
         <!-- ══════════════════════════════════════════════════════════════
+             INSTAGRAM — ACCOUNT CREATION
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">Instagram — Account Creation</h2>
+
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Automates new Instagram account registration on a connected Android device using
+                UI automation (uiautomator2) and automatic email OTP verification via IMAP.
+                All jobs run in the background — poll <span class="icode">/creation-status/{task_id}</span> for progress.
+            </p>
+
+            <!-- Create Account -->
+            <div id="ig-create-account" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/instagram/accounts/create-new</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Create New Instagram Account</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Launches a background job that opens Instagram on the target device and
+                    completes the full signup flow (contact → OTP → birthday → name → password → username).
+                    Returns <span class="icode">202 Accepted</span> immediately with a <span class="icode">task_id</span>.
+                </p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td>ADB serial of the target device (e.g. <code>38R9X18919G04940</code>)</td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="req">required</span></td><td>Desired Instagram username. A numeric suffix is appended automatically if already taken.</td></tr>
+                        <tr><td><code>password</code></td><td>string</td><td><span class="req">required</span></td><td>Account password (min 6 characters)</td></tr>
+                        <tr><td><code>email</code></td><td>string</td><td><span class="opt">optional*</span></td><td>Registration email address. Required if <code>phone_number</code> is omitted.</td></tr>
+                        <tr><td><code>email_password</code></td><td>string</td><td><span class="opt">optional*</span></td><td>Email account password for IMAP OTP retrieval. Required when <code>email</code> is provided.</td></tr>
+                        <tr><td><code>phone_number</code></td><td>string</td><td><span class="opt">optional*</span></td><td>Phone number including country code (e.g. <code>+14155550100</code>). Required if <code>email</code> is omitted.</td></tr>
+                        <tr><td><code>full_name</code></td><td>string</td><td><span class="opt">optional</span></td><td>Display name. Defaults to a title-cased version of <code>username</code>.</td></tr>
+                        <tr><td><code>birthday</code></td><td>string</td><td><span class="opt">optional</span></td><td>ISO date <code>YYYY-MM-DD</code>. Defaults to <code>1995-06-15</code>.</td></tr>
+                        <tr><td><code>imap_server</code></td><td>string</td><td><span class="opt">optional</span></td><td>Override IMAP hostname. Auto-detected from email domain if omitted (Gmail, Outlook, Yahoo, etc.).</td></tr>
+                        <tr><td><code>imap_port</code></td><td>integer</td><td><span class="opt">optional</span></td><td>IMAP port. Defaults to <code>993</code> (SSL).</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">* Either <code>email</code> + <code>email_password</code> or <code>phone_number</code> must be supplied.</p>
+
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Request example (email flow):</p>
+                <pre class="code">POST /api/instagram/accounts/create-new
+Content-Type: application/json
+
+{
+  "device_id":       "38R9X18919G04940",
+  "username":        "mynewaccount",
+  "password":        "Str0ngP@ss!",
+  "email":           "myemail@gmail.com",
+  "email_password":  "gmail_app_password",
+  "full_name":       "My Name",
+  "birthday":        "1998-03-22"
+}</pre>
+
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Response (202):</p>
+                <pre class="code">{
+  "success": true,
+  "message": "Account creation started",
+  "task_id": "3f2d1a8b-4c56-7e89-abcd-ef0123456789"
+}</pre>
+            </div>
+
+            <!-- Creation Status -->
+            <div id="ig-creation-status" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/instagram/accounts/creation-status/{task_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Get Creation Job Status</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Poll this endpoint to track progress of a specific creation job.
+                    Returns <span class="icode">404</span> if <code>task_id</code> is unknown.
+                </p>
+                <pre class="code">// While running:
+{
+  "task_id":    "3f2d1a8b-...",
+  "status":     "running",          // pending | running | completed | failed
+  "step":       "Verifying OTP",    // human-readable current step
+  "result":     null,
+  "error":      null,
+  "created_at": "2026-04-10T12:00:00",
+  "finished_at": null,
+  "params": {
+    "device_id": "38R9X18919G04940",
+    "username":  "mynewaccount",
+    "email":     "myemail@gmail.com"
+    // password and email_password are omitted for security
+  }
+}
+
+// On success:
+{
+  "task_id":    "3f2d1a8b-...",
+  "status":     "completed",
+  "step":       "Done",
+  "result": {
+    "username":  "mynewaccount",
+    "device_id": "38R9X18919G04940",
+    "message":   "Account mynewaccount created"
+  },
+  "error":      null,
+  "finished_at": "2026-04-10T12:03:45"
+}
+
+// On failure:
+{
+  "task_id": "3f2d1a8b-...",
+  "status":  "failed",
+  "step":    "Failed",
+  "result":  null,
+  "error":   "OTP verification failed (code not received)"
+}</pre>
+
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Step values (progress tracking):</p>
+                <table class="field-table">
+                    <thead><tr><th>Step</th><th>Meaning</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>Queued</code></td><td>Job created, thread not yet started</td></tr>
+                        <tr><td><code>Connecting to device</code></td><td>ADB connect in progress</td></tr>
+                        <tr><td><code>Opening fresh Instagram</code></td><td>Force-stopping and relaunching the app</td></tr>
+                        <tr><td><code>Navigating to signup</code></td><td>Tapping "Create new account"</td></tr>
+                        <tr><td><code>Selecting contact method</code></td><td>Choosing email or phone tab</td></tr>
+                        <tr><td><code>Entering email / phone</code></td><td>Typing contact info</td></tr>
+                        <tr><td><code>Waiting for OTP email (up to 90 s)</code></td><td>IMAP polling loop</td></tr>
+                        <tr><td><code>Entering OTP: 123456</code></td><td>Submitting the fetched code</td></tr>
+                        <tr><td><code>Entering birthday</code></td><td>Filling birthday screen</td></tr>
+                        <tr><td><code>Entering name</code></td><td>Typing full name</td></tr>
+                        <tr><td><code>Entering password</code></td><td>Setting account password</td></tr>
+                        <tr><td><code>Setting username</code></td><td>Entering / confirming username</td></tr>
+                        <tr><td><code>Dismissing post-signup screen</code></td><td>Skipping optional screens (photo, notifications…)</td></tr>
+                        <tr><td><code>Reached home — done</code></td><td>Account created, on home feed</td></tr>
+                        <tr><td><code>Done</code></td><td>Job completed, account saved to DB</td></tr>
+                        <tr><td><code>Failed</code></td><td>Job failed — see <code>error</code> field</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- List Creation Jobs -->
+            <div id="ig-creation-jobs" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/instagram/accounts/creation-jobs</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">List All Creation Jobs</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Returns all creation jobs in memory (newest first). Jobs are kept only for the
+                    lifetime of the server process.
+                </p>
+                <pre class="code">{
+  "success": true,
+  "jobs": [
+    {
+      "task_id":    "3f2d1a8b-...",
+      "status":     "completed",
+      "step":       "Done",
+      "result":     { "username": "mynewaccount", ... },
+      "error":      null,
+      "created_at": "2026-04-10T12:00:00",
+      "finished_at":"2026-04-10T12:03:45",
+      "params":     { "device_id": "38R9X18919G04940", "username": "mynewaccount", ... }
+    }
+  ]
+}</pre>
+            </div>
+
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
              TIKTOK — ACCOUNTS
         ══════════════════════════════════════════════════════════════ -->
         <div class="card p-6 mb-6">
@@ -1043,6 +1231,309 @@
 // Response 404 (not found or not running)
 { "error": "Task not found or not running" }</pre>
             </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             TIKTOK — ACCOUNT CREATION
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">TikTok — Account Creation</h2>
+
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Automates new TikTok account registration on a connected Android device.
+                Handles the full flow: Terms → Interests → Profile tab → Sign up →
+                Phone/Email form → OTP → Birthday → Name → Username → Password → post-signup.
+                App data is cleared automatically after each attempt. Poll
+                <span class="icode">/creation-status/{task_id}</span> for live progress.
+            </p>
+
+            <!-- Create Account -->
+            <div id="tt-create-account" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/tiktok/accounts/create-new</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Create New TikTok Account</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Launches a background job. Returns <span class="icode">202</span> immediately with a <span class="icode">task_id</span>.
+                </p>
+                <table class="field-table mt-3">
+                    <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">required</span></td><td>ADB serial of target device</td></tr>
+                        <tr><td><code>password</code></td><td>string</td><td><span class="req">required</span></td><td>Account password (min 8 characters)</td></tr>
+                        <tr><td><code>email</code></td><td>string</td><td><span class="opt">optional*</span></td><td>Registration email. Required if <code>phone_number</code> omitted.</td></tr>
+                        <tr><td><code>email_password</code></td><td>string</td><td><span class="opt">optional*</span></td><td>Email password for IMAP OTP fetch. Required when <code>email</code> provided.</td></tr>
+                        <tr><td><code>phone_number</code></td><td>string</td><td><span class="opt">optional*</span></td><td>Phone with country code (e.g. <code>+14155550100</code>). Required if <code>email</code> omitted.</td></tr>
+                        <tr><td><code>username</code></td><td>string</td><td><span class="opt">optional</span></td><td>Desired username. Numeric suffix appended if taken.</td></tr>
+                        <tr><td><code>full_name</code></td><td>string</td><td><span class="opt">optional</span></td><td>Display name shown on profile.</td></tr>
+                        <tr><td><code>birthday</code></td><td>string</td><td><span class="opt">optional</span></td><td>ISO date <code>YYYY-MM-DD</code>. Defaults to <code>1998-05-20</code>.</td></tr>
+                        <tr><td><code>imap_server</code></td><td>string</td><td><span class="opt">optional</span></td><td>Override IMAP host. Auto-detected from email domain if omitted.</td></tr>
+                        <tr><td><code>imap_port</code></td><td>integer</td><td><span class="opt">optional</span></td><td>IMAP port. Defaults to <code>993</code>.</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">* Either <code>email</code> + <code>email_password</code> or <code>phone_number</code> must be supplied.</p>
+
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Request example:</p>
+                <pre class="code">POST /api/tiktok/accounts/create-new
+Content-Type: application/json
+
+{
+  "device_id":      "38R9X18919G04940",
+  "password":       "Str0ngP@ss!",
+  "email":          "myemail@gmail.com",
+  "email_password": "gmail_app_password",
+  "username":       "mynewtt",
+  "full_name":      "My Name",
+  "birthday":       "1998-05-20"
+}</pre>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Response (202):</p>
+                <pre class="code">{
+  "success": true,
+  "message": "TikTok account creation started",
+  "task_id": "7a1b2c3d-..."
+}</pre>
+            </div>
+
+            <!-- Creation Status -->
+            <div id="tt-creation-status" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/tiktok/accounts/creation-status/{task_id}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Get Creation Job Status</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Returns <span class="icode">404</span> if unknown task_id.</p>
+                <pre class="code">// Running:
+{ "task_id": "...", "status": "running", "step": "Entering birthday", "result": null, "error": null }
+
+// Completed:
+{ "task_id": "...", "status": "completed", "step": "Done",
+  "result": { "username": "mynewtt", "device_id": "38R9X18919G04940", "message": "Account mynewtt created" } }
+
+// Failed:
+{ "task_id": "...", "status": "failed", "step": "Failed", "error": "OTP verification failed" }</pre>
+
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Step sequence:</p>
+                <table class="field-table">
+                    <thead><tr><th>Step</th><th>Meaning</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>Accepting terms</code></td><td>Tapping Continue on Terms screen</td></tr>
+                        <tr><td><code>Skipping interests</code></td><td>Tapping Skip on interests picker</td></tr>
+                        <tr><td><code>Tapping Profile tab</code></td><td>Navigating to guest profile</td></tr>
+                        <tr><td><code>Tapping Sign up</code></td><td>Starting signup flow</td></tr>
+                        <tr><td><code>Selecting phone/email signup</code></td><td>Choosing "Use phone or email"</td></tr>
+                        <tr><td><code>Entering email / phone</code></td><td>Typing contact info</td></tr>
+                        <tr><td><code>Entering birthday</code></td><td>Filling birthday wheel picker</td></tr>
+                        <tr><td><code>Waiting for OTP (up to 90 s)</code></td><td>IMAP polling for TikTok OTP</td></tr>
+                        <tr><td><code>Entering OTP: 123456</code></td><td>Submitting verification code</td></tr>
+                        <tr><td><code>Entering name</code></td><td>Setting display name</td></tr>
+                        <tr><td><code>Setting username</code></td><td>Confirming or editing username</td></tr>
+                        <tr><td><code>Entering password</code></td><td>Creating password (email path)</td></tr>
+                        <tr><td><code>Clearing app data</code></td><td>Always runs at the end (success or failure)</td></tr>
+                        <tr><td><code>Done</code></td><td>Account saved to DB</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- List Jobs -->
+            <div id="tt-creation-jobs" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/tiktok/accounts/creation-jobs</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">List All TikTok Creation Jobs</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">All in-memory jobs (newest first). Cleared on server restart.</p>
+                <pre class="code">{
+  "success": true,
+  "jobs": [ { "task_id": "...", "status": "completed", ... } ]
+}</pre>
+            </div>
+
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════
+             PROXIES
+        ══════════════════════════════════════════════════════════════ -->
+        <div class="card p-6 mb-6">
+            <h2 class="section-title">Proxies</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Manage proxy6.net proxies. The proxy chain is:
+                <span class="icode">Device → Gnirehtet (USB) → PC local forwarder → proxy6.net → Internet</span>.
+                Credentials are injected by the local forwarder; the device never sees them.
+            </p>
+
+            <!-- Get config -->
+            <div id="px-config-get" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/proxy/config</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Get Proxy Config</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Returns masked API key status and live balance from proxy6.net.</p>
+                <pre class="code">{
+  "api_key_set": true,
+  "api_key_masked": "abcd…wxyz",
+  "balance": { "balance": "12.50", "currency": "USD", "count": 1000 }
+}</pre>
+            </div>
+
+            <!-- Set API key -->
+            <div id="px-config-set" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/proxy/config</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Set proxy6.net API Key</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Saves the API key to <span class="icode">proxy_settings.json</span>.</p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th></th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>api_key</code></td><td>string</td><td><span class="req">REQ</span></td><td>Your proxy6.net API key</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">{ "ok": true }</pre>
+            </div>
+
+            <!-- Sync -->
+            <div id="px-sync" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/proxy/sync</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Sync Proxies from proxy6.net</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Pulls all active proxies from proxy6.net and upserts them into the local DB. No body required.</p>
+                <pre class="code">{ "ok": true, "added": 50, "updated": 950 }</pre>
+            </div>
+
+            <!-- List -->
+            <div id="px-list" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-GET">GET</span>
+                    <span class="icode">/proxy/list</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">List All Proxies</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Returns all proxies ordered by status then country.</p>
+                <pre class="code">[
+  {
+    "proxy_id": "12345",
+    "host": "45.130.0.1",
+    "port": 12345,
+    "user": "user123",
+    "proxy_type": "http",
+    "country": "de",
+    "is_active": true,
+    "status": "available",        // "available" | "in_use"
+    "assigned_to": null,          // task_id or device_XXXX when in_use
+    "expires_at": "2026-06-01T00:00:00",
+    "last_used": "2026-04-13T10:22:00",
+    "created_at": "2026-01-01T00:00:00"
+  },
+  ...
+]</pre>
+            </div>
+
+            <!-- Delete -->
+            <div id="px-delete" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-DELETE">DELETE</span>
+                    <span class="icode">/proxy/&lt;proxy_id&gt;</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Delete Proxy</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Permanently removes a proxy from the local DB. Does not cancel it on proxy6.net.</p>
+                <pre class="code">{ "ok": true }</pre>
+            </div>
+
+            <!-- Assign -->
+            <div id="px-assign" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/proxy/assign</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Assign Proxy to Device</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Starts Gnirehtet for the device, acquires an available proxy from the pool, starts a local
+                    TCP forwarder that injects <span class="icode">Proxy-Authorization</span>, and sets the
+                    Android <span class="icode">http_proxy</span> to <span class="icode">10.0.2.2:FORWARDER_PORT</span>.
+                    Idempotent — returns existing assignment if already assigned.
+                </p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th></th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="req">REQ</span></td><td>ADB serial of the target device</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// Fresh assignment:
+{
+  "ok": true,
+  "proxy_id": "12345",
+  "host": "45.130.0.1",
+  "port": 12345,
+  "forwarder_port": 54321   // local PC port the device routes through
+}
+
+// Already assigned:
+{
+  "ok": true,
+  "already_assigned": true,
+  "proxy_id": "12345",
+  "host": "45.130.0.1",
+  "port": 12345
+}
+
+// No proxies available:
+{ "error": "No available proxies in pool" }   // 503</pre>
+            </div>
+
+            <!-- Unassign -->
+            <div id="px-unassign" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/proxy/unassign</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Unassign Proxy</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Stops the local forwarder, clears the device's <span class="icode">http_proxy</span> via ADB,
+                    and returns the proxy to the <span class="icode">available</span> pool.
+                    Pass either <span class="icode">proxy_id</span> or <span class="icode">device_id</span>.
+                </p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th></th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>proxy_id</code></td><td>string</td><td><span class="opt">OPT</span></td><td>proxy6.net proxy ID to release</td></tr>
+                        <tr><td><code>device_id</code></td><td>string</td><td><span class="opt">OPT</span></td><td>ADB serial — releases the proxy assigned to this device</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-xs text-gray-400 mt-1">At least one of <code>proxy_id</code> / <code>device_id</code> is required.</p>
+                <pre class="code">{ "ok": true, "proxy_id": "12345" }
+
+// Nothing was assigned:
+{ "ok": true, "note": "No active assignment found" }</pre>
+            </div>
+
+            <!-- Bulk unassign -->
+            <div id="px-bulk-unassign" class="ep">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="badge badge-POST">POST</span>
+                    <span class="icode">/proxy/bulk-unassign</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Bulk Unassign Proxies</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Release multiple proxies at once. Same effect as calling <span class="icode">/proxy/unassign</span>
+                    for each — stops forwarders, clears device proxies, returns all to pool.
+                </p>
+                <table class="field-table">
+                    <thead><tr><th>Field</th><th>Type</th><th></th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>proxy_ids</code></td><td>string[]</td><td><span class="req">REQ</span></td><td>Array of proxy6.net proxy IDs to release</td></tr>
+                    </tbody>
+                </table>
+                <pre class="code">// Request:
+{ "proxy_ids": ["12345", "12346", "12347"] }
+
+// Response:
+{ "ok": true, "released": 3 }</pre>
+            </div>
+
         </div>
 
     </div><!-- /main -->

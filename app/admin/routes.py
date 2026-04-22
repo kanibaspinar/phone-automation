@@ -306,10 +306,53 @@ def tasks():
         logger.error(error_msg)
         return render_template('admin/error.html', error=error_msg)
 
+@bp.route('/devices/screens')
+def device_screens():
+    """Devices with live web screen view powered by mysc"""
+    devices = Device.query.all()
+    return render_template('admin/device_screens.html', devices=devices)
+
+
+@bp.route('/devices/screens/<path:device_id>/stream')
+def device_screen_stream(device_id):
+    """MJPEG live stream for a single device screen (mysc VideoAdapter)"""
+    from app.utils.screen_stream import generate_mjpeg
+    from flask import Response, stream_with_context
+    return Response(
+        stream_with_context(generate_mjpeg(device_id)),
+        mimetype='multipart/x-mixed-replace; boundary=frame',
+    )
+
+
+@bp.route('/devices/screens/<path:device_id>/release', methods=['POST'])
+def device_screen_release(device_id):
+    """Release mysc VideoAdapter for a device (called when user stops stream)"""
+    from app.utils.screen_stream import release_adapter
+    release_adapter(device_id)
+    return jsonify({'success': True})
+
+
+@bp.route('/instagram/bulk-creator')
+def bulk_creator():
+    """Bulk Instagram account creation page"""
+    devices = Device.query.all()
+    return render_template('admin/bulk_creator.html', devices=devices)
+
+
 @bp.route('/api-docs')
 def api_docs():
     """API Documentation page"""
     return render_template('admin/api_docs.html')
+
+
+@bp.route('/proxies')
+def proxies():
+    """Proxy management page"""
+    from app.models.proxy import Proxy
+    from app.utils import proxy_manager
+    proxy_list = Proxy.query.order_by(Proxy.status, Proxy.country).all()
+    api_key = proxy_manager.get_api_key()
+    return render_template('admin/proxies.html', proxies=proxy_list, api_key_set=bool(api_key))
 
 @bp.route('/devices/show-screen/<device_id>', methods=['POST'])
 def show_device_screen(device_id):

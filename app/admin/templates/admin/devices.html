@@ -47,6 +47,13 @@
                    hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
         <i class="fas fa-wifi"></i> Gnirehtet
     </button>
+    <button onclick="bulkAssignProxy()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                   bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400
+                   border border-indigo-200 dark:border-indigo-800
+                   hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
+        <i class="fas fa-shield-alt"></i> Assign Proxy
+    </button>
 </div>
 
 <!-- Devices Table -->
@@ -153,6 +160,11 @@
                                     class="text-xs text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-colors">
                                 <i class="fas fa-wifi text-xs mr-0.5"></i>Inet
                             </button>
+                            <button onclick="assignProxy('{{ device.device_id }}')"
+                                    title="Assign proxy"
+                                    class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+                                <i class="fas fa-shield-alt text-xs mr-0.5"></i>Proxy
+                            </button>
                             <button onclick="deleteDevice('{{ device.device_id }}')"
                                     class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors">
                                 <i class="fas fa-trash text-xs"></i>
@@ -236,6 +248,53 @@ function showDeviceScreen(deviceId) {
     .then(data => {
         if (!data.success) showToast('Failed: ' + data.message, 'error');
         else showToast('Opening screen mirror…', 'info');
+    });
+}
+
+function assignProxy(deviceId) {
+    if (!confirm(`Assign proxy to device ${deviceId}?\nThis will start Gnirehtet and configure internet routing.`)) return;
+    fetch('/api/proxy/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id: deviceId }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            const msg = data.already_assigned
+                ? `Already assigned: proxy ${data.proxy_id}`
+                : `Proxy assigned: ${data.host}:${data.port} via port ${data.forwarder_port}`;
+            showToast(msg, 'success');
+        } else {
+            showToast('Failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(e => showToast('Request failed', 'error'));
+}
+
+function bulkAssignProxy() {
+    const ids = getSelectedDevices();
+    if (!ids.length) { showToast('Select at least one device', 'info'); return; }
+    if (!confirm(`Assign proxy to ${ids.length} device(s)?`)) return;
+    let done = 0, errors = 0;
+    const total = ids.length;
+    ids.forEach(deviceId => {
+        fetch('/api/proxy/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device_id: deviceId }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) done++; else errors++;
+            if (done + errors === total) {
+                showToast(`Proxies assigned: ${done} ok, ${errors} failed`, errors ? 'error' : 'success');
+            }
+        })
+        .catch(() => {
+            errors++;
+            if (done + errors === total) showToast(`Proxies assigned: ${done} ok, ${errors} failed`, 'error');
+        });
     });
 }
 </script>

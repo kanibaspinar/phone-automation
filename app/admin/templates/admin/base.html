@@ -169,9 +169,21 @@
            class="nav-link {% if request.endpoint == 'admin.tiktok_accounts' %}active{% endif %} whitespace-nowrap">
             <i class="fab fa-tiktok fa-fw text-xs"></i><span>TikTok</span>
         </a>
+        <a href="{{ url_for('admin.bulk_creator') }}"
+           class="nav-link {% if request.endpoint == 'admin.bulk_creator' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-user-plus fa-fw text-xs"></i><span>Creator</span>
+        </a>
+        <a href="{{ url_for('admin.device_screens') }}"
+           class="nav-link {% if request.endpoint == 'admin.device_screens' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-desktop fa-fw text-xs"></i><span>Devices (W. Screen)</span>
+        </a>
         <a href="{{ url_for('admin.tasks') }}"
            class="nav-link {% if request.endpoint == 'admin.tasks' %}active{% endif %} whitespace-nowrap">
             <i class="fas fa-tasks fa-fw text-xs"></i><span>Tasks</span>
+        </a>
+        <a href="{{ url_for('admin.proxies') }}"
+           class="nav-link {% if request.endpoint == 'admin.proxies' %}active{% endif %} whitespace-nowrap">
+            <i class="fas fa-shield-alt fa-fw text-xs"></i><span>Proxies</span>
         </a>
         <a href="{{ url_for('admin.api_docs') }}"
            class="nav-link {% if request.endpoint == 'admin.api_docs' %}active{% endif %} whitespace-nowrap">
