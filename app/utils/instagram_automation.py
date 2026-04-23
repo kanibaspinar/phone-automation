@@ -152,10 +152,10 @@ class InstagramAutomation:
         try:
             subprocess.run([self.device_manager.adb_path, '-s', device_id, 'shell', 'pm', 'clear', self.package_name], check=True)
             time.sleep(2)
-            return True
+            return True, 'Success'
         except Exception as e:
             print(f"Error clearing Instagram data: {e}")
-            return False
+            return False, 'Not Success'
 
     def check_current_account(self, username, d, device_id):
         """Check if the current account is the target account"""
@@ -373,6 +373,8 @@ class InstagramAutomation:
             
             # Ensure Instagram is open
             self.ensure_instagram_open(device_id)
+            print(d.app_current())
+            print(d.dump_hierarchy())
             time.sleep(12)
 
             # Check if account already exists and is logged in
@@ -397,19 +399,20 @@ class InstagramAutomation:
             # Check if login fields exist
             username_field_xpath = '//*[@text="Username, email or mobile number"]'
             username_field_xpath2 = '//*[@text="Phone number, email or username"]'
+            username_field_xpath3 = '//*[@text="Mobile number or email"]'
             if d.xpath(username_field_xpath).exists:   
                d.xpath(username_field_xpath).click()
                time.sleep(3)
                if d(description="Clear Username, email or mobile number text").exists:
                     d(description="Clear Username, email or mobile number text").click()
                     time.sleep(2)
-            if d.xpath(username_field_xpath4).exists:  
-               username_field_xpath = username_field_xpath4             
-               d.xpath(username_field_xpath4).click()
-               time.sleep(3)
-               if d(description="Clear Username, email or mobile number text").exists:
-                    d(description="Clear Username, email or mobile number text").click()
-                    time.sleep(2)
+            # if d.xpath(username_field_xpath4).exists:  
+            #    username_field_xpath = username_field_xpath4             
+            #    d.xpath(username_field_xpath4).click()
+            #    time.sleep(3)
+            #    if d(description="Clear Username, email or mobile number text").exists:
+            #         d(description="Clear Username, email or mobile number text").click()
+            #         time.sleep(2)
             if d.xpath(username_field_xpath2).exists:   
                username_field_xpath = username_field_xpath2
                d.xpath(username_field_xpath).click()
