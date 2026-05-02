@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 TIKTOK_PACKAGE = 'com.zhiliaoapp.musically'
 TIKTOK_MAIN_ACTIVITY = f'{TIKTOK_PACKAGE}/com.ss.android.ugc.aweme.main.MainActivity'
-EVELODE_API_KEY = os.getenv('TIKTOK_API_KEY', '432eb627361003bfc1eddfe0c6ccdd2b')
+EVELODE_API_KEY = os.getenv('TIKTOK_API_KEY', '')
 
 # Per-account last-action timestamps (in-memory; resets on restart)
 _last_action_times: dict[str, datetime] = {}
